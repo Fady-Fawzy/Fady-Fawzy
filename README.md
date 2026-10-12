@@ -1,38 +1,44 @@
 # Fady Fawzy
 
-Computer Engineering undergraduate at Cairo University · Expected graduation: 2029
+**Computer Engineering undergraduate · Cairo University · Expected graduation: 2029**
 
-I build machine learning applications, Python APIs, and systems projects. I am preparing for software engineering, machine learning, and AI internships, with a focus on turning working prototypes into reproducible, tested software.
+Machine Learning · Backend Development · Software Engineering
 
-## About me
+I build ML applications with Python APIs and browser interfaces, alongside C++ simulations and embedded systems projects. I am seeking software engineering, machine learning, and AI internship opportunities.
 
-My projects span tabular machine learning, computer vision, backend development, C++ simulations, and embedded firmware. I am interested in the engineering around a model: preprocessing, inference interfaces, input validation, evaluation, and the user experience that makes predictions usable.
+[LinkedIn](https://www.linkedin.com/in/fady-fawzy1/) · [Explore my repositories](https://github.com/Fady-Fawzy?tab=repositories)
 
-## Selected projects
+## Featured projects
 
-| Project | Engineering focus |
+| Project | What to explore |
 | --- | --- |
-| [Customer Churn Prediction](https://github.com/Fady-Fawzy/Customer-Churn-Prediction-System) | scikit-learn preprocessing pipeline, logistic regression, FastAPI, single and CSV batch inference |
-| [Waste Classification](https://github.com/Fady-Fawzy/Waste-Classification-System-ComputerVision) | ResNet18 image classification, PyTorch inference, FastAPI, browser upload interface |
-| [CURT Inventory Assistant](https://github.com/Fady-Fawzy/CURT_Final_Submission_Groq) | SQLite inventory, rule-based queries, Groq tool calling, FastAPI and Streamlit; mocked provider tests |
-| [Smart Nurse Robot](https://github.com/Fady-Fawzy/Nurse-Robot-) | Team embedded prototype with ARM assembly modules for sensors, display, telemetry, and actuation |
-| [Restaurant Simulation](https://github.com/Fady-Fawzy/Restaurant-management-system-master) | C++ order scheduling, resource allocation, custom queues and stacks |
-| [MedByte](https://github.com/Fady-Fawzy/MedByte) | JavaScript educational memory-compression simulation and approximate SVD visualizer |
+| [Customer Churn Prediction](https://github.com/Fady-Fawzy/Customer-Churn-Prediction-System) | A shared scikit-learn pipeline for preprocessing and inference, FastAPI endpoints, CSV batch predictions, and regression tests. |
+| [Waste Classification](https://github.com/Fady-Fawzy/Waste-Classification-System-ComputerVision) | ResNet18 inference with PyTorch, image upload validation, a browser interface, and CPU inference tests. |
+| [CURT Inventory Assistant](https://github.com/Fady-Fawzy/CURT_Final_Submission_Groq) | Rule-based queries and LLM tool calling over SQLite, with an explicit tool allowlist, FastAPI, Streamlit, and mocked provider tests. |
+| [Smart Nurse Robot](https://github.com/Fady-Fawzy/Nurse-Robot-) | A team STM32 prototype: register-level ARM assembly for sensors, display, telemetry, and actuation. Hardware and build limitations are documented. |
+| [MedByte](https://github.com/Fady-Fawzy/MedByte) | An educational browser simulation with approximate truncated SVD, reconstruction-error visualization, and numerical helper tests. |
+| [Restaurant Simulation](https://github.com/Fady-Fawzy/Restaurant-management-system-master) | C++ scheduling and custom data structures, with a CMake build and queue-lifetime tests. Sample-scenario termination remains an open limitation. |
 
-## Technical skills used in my repositories
+## Engineering in practice
 
-- **Languages:** Python, C++, JavaScript, SQL, HTML, CSS, ARM assembly.
-- **Machine learning:** Pandas, NumPy, scikit-learn, model evaluation, GridSearchCV, PyTorch, torchvision.
-- **Application development:** FastAPI, REST APIs, Streamlit, browser interfaces, SQLite.
-- **Systems and tools:** Git, STM32 peripherals, custom C++ data structures.
+- **Test behavior:** [Churn API tests](https://github.com/Fady-Fawzy/Customer-Churn-Prediction-System/tree/main/tests) cover prediction boundaries, invalid requests, and CSV exports; [CI](https://github.com/Fady-Fawzy/Customer-Churn-Prediction-System/actions) runs the checks.
+- **Separate evidence from claims:** [Evaluation notes](https://github.com/Fady-Fawzy/Customer-Churn-Prediction-System/blob/main/docs/evaluation.md) distinguish validation, held-out testing, and the full-data serving artifact.
+- **Make systems inspectable:** Project READMEs explain setup, design decisions, verification, and known limitations.
 
-## Current engineering interests
+## Technical toolkit
 
-- Reliable model serving and consistent preprocessing between training and inference.
-- Evaluation that separates validation decisions from held-out testing.
-- Maintainable backend and full-stack applications with meaningful automated tests.
-- Stronger software design, data structures, and low-level systems fundamentals.
+Tools represented in my public project code:
 
-## Connect
+| Area | Technologies |
+| --- | --- |
+| Languages | Python, C++, JavaScript, SQL, HTML, CSS, ARM assembly |
+| Machine learning | Pandas, NumPy, scikit-learn, GridSearchCV, model evaluation, PyTorch, torchvision |
+| Applications | FastAPI, REST APIs, Streamlit, SQLite, browser interfaces |
+| Systems and delivery | Git, GitHub Actions, CMake, STM32 peripherals, custom C++ data structures |
 
-[LinkedIn](https://www.linkedin.com/in/fady-fawzy1/) · [GitHub](https://github.com/Fady-Fawzy)
+## Current focus
+
+- Reliable model serving with consistent training and inference preprocessing.
+- Better evaluation, calibration, and reproducible experiment records.
+- Maintainable backend and full-stack applications with meaningful tests.
+- Stronger software design, algorithms, and low-level systems fundamentals.
