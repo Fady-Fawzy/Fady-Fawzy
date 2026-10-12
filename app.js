@@ -1,1262 +1,490 @@
-/**
- * ============================================================================
- * FADY FAWZY PORTFOLIO - CORE ENGINE (app.js)
- * ============================================================================
- * Purpose: Manages all interactive systems, performance-optimized animations,
- * dynamic styling, persistent theme states, canvas graphics, and event loops.
- *
- * Architecture and Design Patterns:
- * 1. Cache-Heavy DOM Access: References are pre-queried to avoid layout thrashing.
- * 2. Event Consolidation: Scroll and mousemove handlers are unified or throttled.
- * 3. Passive Event Listeners: Enhances scrolling performance (scroll-blocking bypass).
- * 4. CSS Containment Fixes: Works around backdrop-filter positioning bugs in browsers.
- * 5. Linear Interpolation (Lerp): Utilized for smooth lagging effects (e.g. custom cursor).
- * 6. High-Performance Canvas: Locks particle render loops inside requestAnimationFrame,
- *    pauses when the tab is inactive to preserve resources, battery, and AI credits.
- * 7. Redundancy Resilience: Accommodates both targeted static counter animations
- *    and generic observer-driven counters.
- * ============================================================================
- */
-// ===== FIREBASE SERVICE CONFIGURATION & INITIALIZATION =====
-// Note for developer/AI: Replace these credentials with Fady's active Firebase dashboard parameters.
-// If config is left empty or is incomplete, the system triggers 'Resiliency Fallback',
-// rendering hardcoded static content seamlessly so there is 0% downtime!
-// firebaseConfig is now loaded globally from firebase-config.js
-
-let db = null;
-let isFirebaseEnabled = false;
-
-if (firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("PLACEHOLDER") && typeof firebase !== "undefined") {
-  try {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-    isFirebaseEnabled = true;
-    console.log("Firebase Firestore dynamic connection initialized successfully.");
-  } catch (error) {
-    console.warn("Firebase initialization failed. Falling back to static data-resilience markup: ", error);
+/* Public workbench. External records are rendered with DOM text nodes only. */
+(function () {
+  'use strict';
+  const C = window.PortfolioContent;
+  if (!C) return; // The readable HTML remains available if a local script fails.
+  const $ = id => document.getElementById(id);
+  const el = (tag, value, className) => {
+    const node = document.createElement(tag);
+    if (value !== undefined) node.textContent = value;
+    if (className) node.className = className;
+    return node;
+  };
+  const state = { projects: C.mergeProjects(), academic: C.mergeAcademic(), skills: C.mergeSkills(), filter: 'all', stage: 1 };
+  const requestedTrail = new URL(location.href).searchParams.get('tool');
+  state.trail = C.getEvidenceTrail(requestedTrail) ? requestedTrail : 'python';
+  const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
+  motionPreference.addEventListener('change', event => { if (event.matches) $('pipelineDetail')?.getAnimations().forEach(animation => animation.cancel()); });
+  let db = null;
+  let syncPromise = null;
+  const categoryNames = { ai: 'AI & data', embedded: 'Embedded / hardware', software: 'Software / C++', design: 'Design / research' };
+  function link(label, href, className = '') {
+    const node = el('a', label, className);
+    node.href = href;
+    if (href.startsWith('https://')) { node.target = '_blank'; node.rel = 'noopener noreferrer'; }
+    return node;
   }
-} else {
-  console.log("Firebase placeholder credentials active. Operating on static fallback resilience.");
-}
-
-// ===== TOUCH DEVICE DETECTION =====
-// Checks if the client has touch capability (mobile/tablet viewports).
-// Adds the 'touch-device' body class which is used in CSS/JS to:
-// - Disable custom cursors (since touch screens have no hover/cursor state).
-// - Suppress heavy mousemove computations like parallax/tilt.
-// - Ensure elements respect touch action boundaries.
-function isTouchDevice() {
-  return (('ontouchstart' in window) ||
-    (navigator.maxTouchPoints > 0) ||
-    (navigator.msMaxTouchPoints > 0));
-}
-
-if (isTouchDevice()) {
-  document.body.classList.add('touch-device');
-}
-
-// Utility: Escape HTML to prevent XSS in dynamically rendered content
-function escapeHTML(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-// ===== PAGE LOADER =====
-// Operates on global window load. Dismisses the custom circular preloader.
-// Applies a 400ms buffer to ensure initial page paints, assets, and local variables
-// are loaded, then slides/fades the loader via CSS opacity.
-// Removes the loader element from the DOM after 700ms transition time to save memory.
-window.addEventListener('load', async () => {
-  if (typeof feather !== 'undefined') feather.replace();
-  
-  // Wait for Firebase data to load FIRST (with a maximum timeout of 3 seconds)
-  // This prevents the "flicker" effect where old HTML data is visible before Firebase injects new data.
-  try {
-    await Promise.race([
-      syncPortfolioData(),
-      new Promise(resolve => setTimeout(resolve, 3000))
-    ]);
-  } catch (e) {
-    console.error("Firebase sync timeout or error:", e);
+  function renderAcademic() {
+    document.querySelectorAll('[data-academic]').forEach(node => {
+      const [area, field] = node.dataset.academic.split('.');
+      node.textContent = state.academic[area][field];
+    });
   }
-
-  // Dismiss the loader ONLY after data is fetched and injected
-  const loader = document.getElementById('pageLoader');
-  if (loader) {
-    loader.classList.add('loaded');
-    setTimeout(() => {
-      loader.remove();
-      window.dispatchEvent(new Event('preloaderFinished'));
-    }, 700);
-  } else {
-    window.dispatchEvent(new Event('preloaderFinished'));
+  function renderPipeline(article) {
+    const group = article.querySelector('.pipeline-nodes');
+    C.stages.forEach((stage, index) => {
+      const button = el('button', undefined, 'pipeline-node');
+      button.type = 'button'; button.dataset.stage = index;
+      button.setAttribute('aria-pressed', String(index === state.stage));
+      button.setAttribute('aria-controls', 'pipelineDetail');
+      const port = el('span', String(index + 1).padStart(2, '0'), 'node-port');
+      port.setAttribute('aria-hidden', 'true');
+      button.append(port, el('span', stage.label, 'node-label'));
+      group.append(button);
+    });
+    updatePipeline(article);
   }
-});
-
-// ===== DOM ELEMENTS =====
-// Central caching system for DOM nodes used in high-frequency events.
-// Keeps lookup times at O(1) inside scroll, mouse, and animation frames.
-const navbar = document.getElementById('navbar');
-const navToggle = document.getElementById('navToggle');
-const navLinks = document.getElementById('navLinks');
-const scrollProgress = document.getElementById('scrollProgress');
-const backToTop = document.getElementById('backToTop');
-const sections = document.querySelectorAll('section[id]');
-const navLinkElements = document.querySelectorAll('.nav-link');
-const cursorDot = document.getElementById('cursorDot');
-const cursorOutline = document.getElementById('cursorOutline');
-const floatingContactBtn = document.getElementById('floatingContactBtn');
-const parallaxSections = document.querySelectorAll('#hero, #about, #skills, #projects');
-let lastScrollTop = 0;
-let floatingScrollTimer = null;
-
-// ===== SINGLE CONSOLIDATED SCROLL HANDLER =====
-// EXTREMELY IMPORTANT FOR PERFORMANCE:
-// Combines multiple scroll-related calculations into a single listener.
-// Binds scroll with { passive: true } to tell the browser's compositor thread
-// that it does not need to wait for JS execution before painting the scroll offset.
-// Tasks executed here:
-// 1. Add background blur/glassmorphism class to the navbar past 50px scroll height.
-// 2. Scan sections coordinates to calculate active section link (Spy-Scroll).
-// 3. Compute current document scroll percentage to update top progress bar.
-// 4. Reveal the Back-To-Top button past 500px height threshold.
-function onScroll() {
-  const scrollY = window.scrollY;
-
-  // Navbar glassmorphism class toggle
-  if (scrollY > 50) {
-    navbar.classList.add('scrolled');
-  } else {
-    navbar.classList.remove('scrolled');
+  function updatePipeline(article = $('project-churn')) {
+    if (!article) return;
+    const stage = C.stages[state.stage];
+    article.querySelectorAll('[data-stage]').forEach(button => {
+      const index = Number(button.dataset.stage);
+      button.setAttribute('aria-pressed', String(index === state.stage));
+      button.dataset.traced = String(index <= state.stage);
+    });
+    article.querySelector('.pipeline-sheet').dataset.stageIndex = state.stage;
+    article.querySelector('.pipeline-position').textContent = (state.stage + 1) + ' / ' + C.stages.length;
+    const detail = article.querySelector('#pipelineDetail');
+    if (detail) {
+      const handoff = el('dl', undefined, 'pipeline-handoff');
+      for (const [label, field] of [['Input','input'],['Decision','decision'],['Output','output']]) { const row = el('div'); row.append(el('dt', label), el('dd', stage[field])); handoff.append(row); }
+      detail.replaceChildren(el('h4', stage.title), el('code', stage.code), handoff, el('p', stage.description, 'pipeline-context'));
+      if (detail.isConnected && !motionPreference.matches && typeof detail.animate === 'function') {
+        detail.getAnimations().forEach(animation => animation.cancel());
+        detail.animate([{ opacity: .7 }, { opacity: 1 }], { duration: 140, easing: 'ease-out' });
+      }
+    }
   }
-
-  // Active nav link highlight (Spy-scroll mechanism)
-  // Utilizes a 150px offset to trigger highlight when the user reaches the section's top half.
-  const scrollPos = scrollY + 150;
-  sections.forEach(section => {
-    const top = section.offsetTop;
-    const height = section.offsetHeight;
-    const id = section.getAttribute('id');
-    if (scrollPos >= top && scrollPos < top + height) {
-      navLinkElements.forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('href') === `#${id}`) {
-          link.classList.add('active');
-        }
+  function renderSoftwareSketch(article, id) {
+    const art = article.querySelector('.software-art');
+    if (id === 'flowchart') {
+      art.append(el('span', 'start', 'flow-node'), el('span', '→'), el('span', 'condition?', 'flow-node flow-decision'), el('span', '→'), el('span', 'C++', 'flow-node'));
+    } else {
+      const queue = el('div', undefined, 'queue-art');
+      for (const name of ['dine-in', 'takeaway', 'delivery']) {
+        const lane = el('div', undefined, 'queue-lane');
+        lane.append(el('span', name, 'queue-label'));
+        for (let i = 0; i < 4; i++) lane.append(el('span', undefined, 'queue-slot'));
+        queue.append(lane);
+      }
+      art.append(queue);
+    }
+  }
+  function renderProjects() {
+    const openNotes = new Set([...document.querySelectorAll('[data-project] details[open]')].map(node => node.closest('[data-project]').dataset.project));
+    const stageFocus = document.activeElement?.dataset.stage;
+    const fragment = document.createDocumentFragment();
+    for (const project of state.projects) {
+      const featured = project.id === 'churn' || project.id === 'nurse';
+      const software = project.id === 'flowchart' || project.id === 'restaurant';
+      const template = $(featured ? project.id === 'churn' ? 'churnTemplate' : 'nurseTemplate' : software ? 'softwareTemplate' : 'entryTemplate');
+      const article = el('article');
+      article.dataset.project = project.id;
+      article.dataset.category = project.category;
+      article.id = 'project-' + project.id.replace(/[^a-zA-Z0-9_-]/g, '-');
+      article.tabIndex = -1;
+      article.className = featured ? 'project-feature ' + project.id + '-project' : software ? 'software-project' : 'project-entry';
+      article.append(template.content.cloneNode(true));
+      for (const field of ['title', 'description', 'year']) article.querySelector('[data-field="' + field + '"]').textContent = project[field];
+      const category = article.querySelector('[data-field="category"]');
+      if (category) category.textContent = categoryNames[project.category];
+      article.querySelector('[data-field="tags"]').textContent = project.tags.join(' / ');
+      const details = article.querySelector('[data-field="details"]');
+      if (details) project.details.forEach(item => details.append(el('li', item)));
+      const links = article.querySelector('[data-field="links"]');
+      if (project.repoLink) links.append(link('View source ↗', project.repoLink));
+      if (project.mediaLink) links.append(link('View project media ↗', project.mediaLink));
+      if (!project.repoLink && !project.mediaLink) links.append(el('span', 'Source link not supplied', 'source-unavailable'));
+      if (project.id === 'churn') renderPipeline(article);
+      if (software) renderSoftwareSketch(article, project.id);
+      const symbol = article.querySelector('.entry-symbol');
+      if (symbol) symbol.textContent = { alu: '⊞', lampshade: '☼', sdg: '↗' }[project.id] || '{ }';
+      if (openNotes.has(project.id)) article.querySelector('details')?.setAttribute('open', '');
+      fragment.append(article);
+    }
+    $('projectList').replaceChildren(fragment);
+    document.querySelectorAll('.sketch-outputs a').forEach(anchor => {
+      if (!anchor.dataset.projectTarget) anchor.dataset.projectTarget = anchor.getAttribute('href');
+      anchor.href = document.querySelector(anchor.dataset.projectTarget) ? anchor.dataset.projectTarget : '#projects';
+    });
+    applyFilter();
+    if (stageFocus !== undefined) $('project-churn')?.querySelector('[data-stage="' + stageFocus + '"]')?.focus({ preventScroll: true });
+  }
+  function applyFilter() {
+    let visible = 0;
+    document.querySelectorAll('[data-project]').forEach(article => {
+      article.hidden = state.filter !== 'all' && article.dataset.category !== state.filter;
+      if (!article.hidden) visible++;
+    });
+    document.querySelectorAll('[data-filter]').forEach(button => {
+      const active = button.dataset.filter === state.filter;
+      button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active));
+    });
+    $('projectCount').textContent = state.filter === 'all' ? state.projects.length + ' projects' : visible + ' of ' + state.projects.length + ' projects';
+    $('projectEmpty').hidden = visible !== 0;
+  }
+  $('projects').addEventListener('click', event => {
+    const filter = event.target.closest('[data-filter]');
+    if (filter) { state.filter = filter.dataset.filter; applyFilter(); }
+    const stage = event.target.closest('[data-stage]');
+    if (stage) { state.stage = Number(stage.dataset.stage); updatePipeline(); }
+  });
+  $('projects').addEventListener('keydown', event => {
+    const button = event.target.closest('[data-stage]');
+    if (!button || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    event.preventDefault();
+    state.stage = event.key === 'Home' ? 0 : event.key === 'End' ? C.stages.length - 1 : (Number(button.dataset.stage) + (event.key === 'ArrowRight' ? 1 : -1) + C.stages.length) % C.stages.length;
+    updatePipeline(); $('project-churn').querySelector('[data-stage="' + state.stage + '"]').focus();
+  });
+  function renderExperience() {
+    const fragment = document.createDocumentFragment();
+    C.experience.forEach(item => {
+      const article = el('article', undefined, 'experience-entry'); article.id = item.id; article.tabIndex = -1;
+      const meta = el('div', undefined, 'experience-meta');
+      meta.append(el('p', item.period, 'experience-period'), el('p', item.location, 'experience-location'));
+      const body = el('div');
+      body.append(el('h3', item.role), el('p', item.company, 'experience-company'));
+      const details = el('ul'); item.details.forEach(detail => details.append(el('li', detail)));
+      body.append(details); article.append(meta, body); fragment.append(article);
+      if (item.credentialId && C.credentials.some(credential => credential.id === item.credentialId)) body.append(link('See the certificate ↗', '#credential-' + item.credentialId, 'experience-proof'));
+    });
+    $('experienceList').replaceChildren(fragment);
+  }
+  function renderSkills() {
+    const rows = [
+      { title: 'AI & data', category: 'data', evidence: [['Churn pipeline', '#project-churn'], ['ML internship', '#ml-internship'], ['Python data analysis', '#credential-fcc']] },
+      { title: 'Programming', category: 'languages', evidence: [['C++ in practice', '#project-flowchart'], ['Python foundations', '#credential-python']] },
+      { title: 'Backend & embedded', category: 'embedded', evidence: [['FastAPI inference', '#project-churn'], ['STM32 from scratch', '#project-nurse']] },
+      { title: 'Tools & workflow', category: 'tools', evidence: [['FPGA / ModelSim', '#project-alu'], ['Power BI / DEPI', '#credential-depi'], ['AutoCAD / industry', '#electrical-experience']] }
+    ];
+    const fragment = document.createDocumentFragment();
+    const trace = el('div', undefined, 'skills-tracer');
+    const lead = el('div'); lead.append(el('p', 'FOLLOW A TOOL', 'eyebrow'), el('h3', 'What’s behind the skill?'));
+    const controls = el('div', undefined, 'evidence-controls'); controls.id = 'skillsTrailControls'; controls.setAttribute('role','group'); controls.setAttribute('aria-label','Choose a skill to see its evidence');
+    const trail = el('div', undefined, 'evidence-trail'); trail.id = 'skillsTrailDetail';
+    trace.append(lead, controls, trail); fragment.append(trace);
+    rows.forEach(row => {
+      const article = el('article', undefined, 'skill-evidence-row');
+      const evidence = el('div', undefined, 'skill-evidence-links'); evidence.append(el('span', 'SEEN IN THE WORK'));
+      row.evidence.forEach(([label, href]) => {
+        // Archived projects must not leave broken evidence links behind.
+        if (href.startsWith('#project-') && !document.querySelector(href)) return;
+        evidence.append(link(label, href));
       });
-    }
-  });
-
-  // Top Horizontal Scroll Progress Bar
-  if (scrollProgress) {
-    const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-    const scrolled = (winScroll / height) * 100;
-    scrollProgress.style.width = scrolled + '%';
-    scrollProgress.setAttribute('aria-valuenow', Math.round(scrolled));
-  }
-
-  // Back to top button visibility threshold
-  if (backToTop) {
-    if (scrollY > 500) {
-      backToTop.classList.add('visible');
-    } else {
-      backToTop.classList.remove('visible');
-    }
-  }
-
-  // Floating contact button visibility (debounced scroll direction detection)
-  if (floatingContactBtn) {
-    if (floatingScrollTimer) clearTimeout(floatingScrollTimer);
-    floatingScrollTimer = setTimeout(() => {
-      if (scrollY > lastScrollTop && scrollY > 300) {
-        floatingContactBtn.classList.add('hidden');
-      } else {
-        floatingContactBtn.classList.remove('hidden');
-      }
-      lastScrollTop = scrollY <= 0 ? 0 : scrollY;
-    }, 50);
-  }
-
-  // Subtle parallax on section backgrounds (desktop only)
-  if (!isTouchDevice()) {
-    parallaxSections.forEach(section => {
-      const rect = section.getBoundingClientRect();
-      if (rect.top < window.innerHeight && rect.bottom > 0) {
-        const offset = (scrollY - section.offsetTop) * 0.03;
-        section.style.backgroundPositionY = offset + 'px';
-      }
+      article.append(el('h3', row.title), el('p', state.skills[row.category].join(' · '), 'skill-inventory'), evidence);
+      fragment.append(article);
     });
+    fragment.append(el('p', 'Working with people: ' + state.skills.soft.join(' · ') + '.', 'skill-footnote'));
+    $('skillsEvidence').replaceChildren(fragment);
+    renderTrailControls(); renderEvidence();
   }
-}
-
-window.addEventListener('scroll', onScroll, { passive: true });
-
-// ===== MOBILE NAVIGATION =====
-// Handles opening and closing the hamburger menu panel on mobile layout.
-// CSS HACK & DESIGN DECISION:
-// When the mobile overlay menu is open, the '.menu-open' class is toggled on the navbar.
-// This class removes 'backdrop-filter: blur' from the scrolled navbar.
-// Why? In standard CSS specifications, 'backdrop-filter' forces the browser to create a 
-// new CSS containing block on that container. This breaks nested fixed position elements
-// (like the fullscreen navigation menu container), causing them to anchor to the parent
-// container instead of the viewport. Toggling backdrop-filter off fixes this.
-navToggle.addEventListener('click', () => {
-  navToggle.classList.toggle('active');
-  const isOpen = navLinks.classList.toggle('open');
-  navbar.classList.toggle('menu-open');
-  document.body.classList.toggle('no-scroll', isOpen);
-});
-
-// Close mobile fullscreen navigation overlay if a click is detected outside the nav container
-document.addEventListener('click', (e) => {
-  if (navLinks.classList.contains('open') && !navLinks.contains(e.target) && !navToggle.contains(e.target)) {
-    navToggle.classList.remove('active');
-    navLinks.classList.remove('open');
-    navbar.classList.remove('menu-open');
-    document.body.classList.remove('no-scroll');
+  function renderTrailControls() {
+    for (const id of ['evidenceControls','skillsTrailControls']) {
+      const group = $(id); if (!group) continue;
+      group.replaceChildren(...C.evidenceTrails.map(trail => {
+        const button = el('button', trail.label, 'trail-button'); button.type = 'button'; button.dataset.trail = trail.id;
+        button.setAttribute('aria-controls', id === 'evidenceControls' ? 'evidenceTrail' : 'skillsTrailDetail');
+        return button;
+      }));
+    }
   }
-});
-
-// Close mobile navigation overlay when clicking any of the navigation links (redirecting to a section)
-navLinks.querySelectorAll('a').forEach(link => {
-  link.addEventListener('click', () => {
-    navToggle.classList.remove('active');
-    navLinks.classList.remove('open');
-    navbar.classList.remove('menu-open');
-    document.body.classList.remove('no-scroll');
-  });
-});
-
-// ===== SCROLL REVEAL ANIMATIONS =====
-// Standard scroll-triggered appearance system using IntersectionObserver.
-// Target class: '.reveal'.
-// Threshold: Fires when at least 10% of the element's block is inside the viewport.
-// Action: Attaches the '.visible' class which initiates a GPU-accelerated CSS transition.
-const revealElements = document.querySelectorAll('.reveal');
-
-const revealObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
+  function renderEvidence(announce = false) {
+    const trail = C.getEvidenceTrail(state.trail, state.projects);
+    document.querySelectorAll('[data-trail]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.trail === state.trail)));
+    document.querySelectorAll('[data-evidence-match]').forEach(artifact => artifact.removeAttribute('data-evidence-match'));
+    for (const id of ['evidenceTrail','skillsTrailDetail']) {
+      const panel = $(id); if (!panel) continue;
+      const heading = el('p', trail.label + ': ' + trail.summary, 'trail-summary');
+      const list = el('ol', undefined, 'trail-links');
+      trail.items.forEach(item => {
+        const row = el('li');
+        const evidence = link(item.title, item.target); evidence.className = 'trail-evidence-link';
+        evidence.prepend(el('span', { credential:'Learning', experience:'Fieldwork', project:'Build' }[item.kind], 'trail-kind'));
+        row.append(evidence, el('p', item.detail, 'trail-detail')); list.append(row);
+        document.getElementById(item.target.slice(1))?.setAttribute('data-evidence-match', trail.id);
+      });
+      panel.replaceChildren(heading, list);
+      if (!trail.items.length) panel.append(el('p','No visible evidence for this tool. Choose another tool.','trail-empty'));
     }
+    if (announce) $('evidenceStatus').textContent = trail.items.length + ' evidence ' + (trail.items.length === 1 ? 'item' : 'items') + ' connected to ' + trail.label + '.';
+  }
+  function selectTrail(id, focusGroup) {
+    if (!C.getEvidenceTrail(id, state.projects)) return;
+    state.trail = id; renderEvidence(true);
+    const url = new URL(location.href); url.searchParams.set('tool', id); history.replaceState(null, '', url);
+    if (focusGroup) focusGroup.querySelector('[data-trail="' + id + '"]')?.focus({ preventScroll:true });
+  }
+  document.addEventListener('click', event => { const button = event.target.closest('[data-trail]'); if (button) selectTrail(button.dataset.trail); });
+  document.addEventListener('keydown', event => {
+    const button = event.target.closest('[data-trail]'); if (!button || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    event.preventDefault(); const index = C.evidenceTrails.findIndex(trail => trail.id === button.dataset.trail);
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? C.evidenceTrails.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + C.evidenceTrails.length) % C.evidenceTrails.length;
+    selectTrail(C.evidenceTrails[next].id, button.parentElement);
   });
-}, {
-  threshold: 0.1,
-  rootMargin: '0px 0px -40px 0px'
-});
-
-revealElements.forEach(el => revealObserver.observe(el));
-
-// ===== ANIMATED COUNTER =====
-// Targeted stat counters for the Hero section.
-// Transition: Uses cubic ease-out (eased = 1 - (1 - progress)^3) to give numbers
-// an elegant deceleration curve as they approach their actual values.
-// Performance: requestAnimationFrame keeps DOM reflows synchronized with GPU monitor cycles.
-// Note: A second dynamic counter observer is implemented at line 728 for generic data elements.
-function animateCounters() {
-  const counters = document.querySelectorAll('[data-count]');
-
-  counters.forEach(counter => {
-    const target = parseFloat(counter.getAttribute('data-count'));
-    const isDecimal = target % 1 !== 0; // Check if the statistic is a float (e.g. GPA 3.94)
-    const duration = 2000; // Counter runs for exactly 2 seconds
-    const startTime = performance.now();
-
-    function update(currentTime) {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      // Easing function: Cubic Ease-Out
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const current = eased * target;
-
-      counter.textContent = isDecimal ? current.toFixed(2) : Math.round(current);
-
-      if (progress < 1) {
-        requestAnimationFrame(update);
-      }
-    }
-
-    requestAnimationFrame(update);
-  });
-}
-
-// Triggers the hero statistics counters once the hero section enters 30% into view.
-const heroSection = document.getElementById('hero');
-const counterObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      animateCounters();
-      counterObserver.unobserve(entry.target); // Trigger once, then unobserve to free memory
-    }
-  });
-}, { threshold: 0.3 });
-
-counterObserver.observe(heroSection);
-
-// ===== SMOOTH SCROLL FOR ALL ANCHOR LINKS =====
-// Overrides default quick jump navigation links that reference page anchors starting with '#'.
-// Implements modern, smooth hardware scrolling behavior targeting the top of the element.
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-  anchor.addEventListener('click', function (e) {
-    e.preventDefault();
-    const target = document.querySelector(this.getAttribute('href'));
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  });
-});
-
-// ===== CONTACT FORM HANDLER =====
-// Intercepts submit events on the contact form, passing inputs asynchronously to Formspree.
-// Prevents standard redirect page reload to preserve portfolio UX.
-// Mechanics:
-// 1. Switches button to a dynamic 'Sending...' state and blocks pointer events (no double submissions).
-// 2. On success: displays 'Message Sent! ✅', updates button gradients to green, and resets inputs.
-// 3. On error: displays 'Failed to Send ❌' in red.
-// 4. Returns button style, content, and pointer states back to normal after 3 seconds.
-async function handleSubmit(e) {
-  e.preventDefault();
-
-  const form = e.target;
-  const btn = form.querySelector('button[type="submit"]');
-  const originalHTML = btn.innerHTML;
-
-  // Lock button size to prevent layout shift
-  btn.style.minWidth = btn.offsetWidth + 'px';
-  btn.style.minHeight = btn.offsetHeight + 'px';
-
-  btn.innerHTML = '<span>Sending...</span>';
-  btn.style.pointerEvents = 'none';
-
-  try {
-    const response = await fetch(form.action, {
-      method: form.method,
-      body: new FormData(form),
-      headers: { 'Accept': 'application/json' }
+  window.addEventListener('popstate', () => { const id = new URL(location.href).searchParams.get('tool'); state.trail = C.getEvidenceTrail(id) ? id : 'python'; renderEvidence(); });
+  function renderCredentials() {
+    const fragment = document.createDocumentFragment();
+    C.credentials.forEach((credential, index) => {
+      const article = el('article', undefined, 'credential'); article.id = 'credential-' + credential.id; article.tabIndex = -1;
+      const button = el('button', undefined, 'certificate-trigger');
+      button.type = 'button'; button.dataset.credential = credential.id;
+      button.setAttribute('aria-label', 'Open certificate: ' + credential.title);
+      button.setAttribute('aria-haspopup', 'dialog');
+      button.style.setProperty('--ratio', credential.width + ' / ' + credential.height);
+      const image = el('img'); image.src = credential.thumbnail; image.alt = credential.title + ' certificate awarded to Fady Fawzy';
+      image.width = credential.width; image.height = credential.height; image.loading = 'lazy'; image.decoding = 'async';
+      button.append(image); button.addEventListener('click', () => openCertificate(index));
+      article.append(button, el('p', credential.issuer, 'eyebrow'), el('h3', credential.shortTitle), el('p', credential.date, 'credential-date'), el('p', credential.subject, 'credential-subject'));
+      if (credential.verify) article.append(link('Verify with issuer ↗', credential.verify, 'credential-verify'));
+      else article.append(el('p', 'Artwork available · no public verification link', 'credential-verify-note'));
+      fragment.append(article);
     });
-    
-    if (response.ok) {
-      btn.innerHTML = '<span>Message Sent! \u2705</span>';
-      btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-      form.reset();
-    } else {
-      throw new Error('Network response was not ok.');
-    }
-  } catch (error) {
-    btn.innerHTML = '<span>Failed to Send \u274c</span>';
-    btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
-  } finally {
-    setTimeout(() => {
-      btn.innerHTML = originalHTML;
-      btn.style.background = '';
-      btn.style.pointerEvents = '';
-      btn.style.minWidth = '';
-      btn.style.minHeight = '';
-      if (typeof feather !== 'undefined') feather.replace();
-    }, 3000);
+    $('credentialShelf').replaceChildren(fragment);
   }
-}
 
-// ===== TILT EFFECT ON PROJECT CARDS WITH DYNAMIC LIGHT =====
-// Drives the realistic 3D mouse tilt and glow reflections on portfolio cards.
-// Math details:
-// - Track relative mouse offsets (x, y) relative to the boundaries of the target card.
-// - Find centerX/centerY offset vectors from the card's midpoint.
-// - Divide by a scale factor (22) to limit rotation angles, maintaining subtle aesthetics.
-// - Move radial light glow ('.card-light') to mouse coordinates.
-// - transform: perspective(1200px) activates 3D viewport space in the browser's rendering engine.
-function initProjectCardsTilt() {
-  if (typeof VanillaTilt !== 'undefined') {
-    VanillaTilt.init(document.querySelectorAll(".project-card"), {
-      max: 8,
-      speed: 400,
-      glare: true,
-      "max-glare": 0.15,
-      perspective: 1200,
-      scale: 1.02
-    });
+  // Native dialogs handle tab trapping, Escape, and background inertness.
+  const dialogTriggers = new WeakMap();
+  function openDialog(dialog, focusTarget) {
+    if (dialog.open || document.querySelector('dialog[open]')) return;
+    dialogTriggers.set(dialog, document.activeElement);
+    dialog.showModal(); focusTarget?.focus({ preventScroll: true });
   }
-}
-initProjectCardsTilt();
-
-// ===== MAGNETIC EFFECT ON BUTTONS =====
-// Creates a 'magnetic pull' feel on primary actions when mouse approaches inside.
-// Only enabled on non-touch devices (desktops/laptops).
-const magneticBtns = document.querySelectorAll('.btn-primary-custom, .btn-outline-custom');
-
-if (!isTouchDevice()) {
-  magneticBtns.forEach(btn => {
-    btn.addEventListener('mousemove', (e) => {
-      const rect = btn.getBoundingClientRect();
-      const x = e.clientX - rect.left - rect.width / 2;
-      const y = e.clientY - rect.top - rect.height / 2;
-
-      btn.style.transform = `translate(${x * 0.14}px, ${y * 0.14}px)`;
+  document.querySelectorAll('dialog').forEach(dialog => {
+    dialog.addEventListener('close', () => dialogTriggers.get(dialog)?.focus({ preventScroll: true }));
+    dialog.addEventListener('keydown', event => {
+      if (event.key !== 'Tab') return;
+      const controls = [...dialog.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(control => control.getClientRects().length && !control.closest('[hidden]'));
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
     });
-
-    btn.addEventListener('mouseleave', () => {
-      btn.style.transform = '';
+    dialog.addEventListener('click', event => {
+      if (event.target !== dialog) return;
+      const rect = dialog.getBoundingClientRect();
+      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close();
     });
   });
-}
-
-// ===== DEVELOPER TERMINAL (EASTER EGG) =====
-let typedSequence = '';
-window.addEventListener('keydown', (e) => {
-  // Ignore typing if we are inside the terminal or an input
-  if (document.getElementById('devTerminal') && !document.getElementById('devTerminal').classList.contains('hidden')) return;
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-  if (e.key && e.key.length === 1 && e.key.match(/[a-zA-Z\\]/)) {
-    typedSequence += e.key.toLowerCase();
-    if (typedSequence.length > 20) typedSequence = typedSequence.slice(-20);
-    
-    if (typedSequence.endsWith('fady') || typedSequence.endsWith('terminal')) {
-      typedSequence = '';
-      openTerminal();
-    }
-
-    if (typedSequence.endsWith('helloworld')) {
-      typedSequence = '';
-      activateHelloWorld();
-    }
+  let certificateIndex = 0;
+  function showCertificate(index) {
+    certificateIndex = (index + C.credentials.length) % C.credentials.length;
+    const credential = C.credentials[certificateIndex];
+    $('certificateImage').src = credential.image;
+    $('certificateImage').alt = credential.title + ' — original certificate artwork awarded to Fady Fawzy';
+    $('certificateImage').width = credential.width; $('certificateImage').height = credential.height;
+    $('certificateTitle').textContent = credential.title;
+    $('certificateIssuer').textContent = credential.issuer;
+    $('certificateIssuerNote').textContent = credential.issuerNote;
+    $('certificateDate').textContent = credential.date;
+    $('certificateSubject').textContent = credential.subject;
+    $('certificatePosition').textContent = 'LEARNING EVIDENCE / ' + (certificateIndex + 1) + ' OF ' + C.credentials.length;
+    $('certificateVerify').hidden = !credential.verify;
+    $('certificateNoVerify').hidden = !!credential.verify;
+    if (credential.verify) $('certificateVerify').href = credential.verify;
+    else $('certificateVerify').removeAttribute('href');
+    $('certificateOriginal').href = credential.original;
   }
-  // Ctrl + \ also opens terminal
-  if (e.ctrlKey && e.key === '\\') {
-    e.preventDefault();
-    openTerminal();
-  }
-});
-
-const terminal = document.getElementById('devTerminal');
-const termInput = document.getElementById('termInput');
-const termOutput = document.getElementById('termOutput');
-const termCloseBtn = document.getElementById('termCloseBtn');
-
-function openTerminal() {
-  if (!terminal) return;
-  terminal.classList.remove('hidden');
-  termInput.focus();
-  termOutput.innerHTML = '';
-  typeTerminalText("Welcome to Fady OS v1.0.0\nType 'help' to see available commands.", 0, () => {
-    termInput.focus();
+  function openCertificate(index) { showCertificate(index); openDialog($('credentialDialog'), $('certificateClose')); }
+  $('certificateClose').addEventListener('click', () => $('credentialDialog').close());
+  $('certificatePrev').addEventListener('click', () => showCertificate(certificateIndex - 1));
+  $('certificateNext').addEventListener('click', () => showCertificate(certificateIndex + 1));
+  $('credentialDialog').addEventListener('keydown', event => {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); showCertificate(certificateIndex + (event.key === 'ArrowLeft' ? -1 : 1)); }
   });
-}
+  // A swipe is optional; visible Previous/Next buttons always remain available.
+  let touchStart;
+  $('certificateImage').addEventListener('touchstart', event => { touchStart = event.touches.length === 1 ? { x:event.touches[0].clientX, y:event.touches[0].clientY } : null; }, { passive: true });
+  $('certificateImage').addEventListener('touchend', event => {
+    if (!touchStart || !event.changedTouches.length) return;
+    const delta = event.changedTouches[0].clientX - touchStart.x, vertical = event.changedTouches[0].clientY - touchStart.y;
+    if (Math.abs(delta) > 65 && Math.abs(delta) > Math.abs(vertical)) showCertificate(certificateIndex + (delta < 0 ? 1 : -1));
+    touchStart = null;
+  }, { passive: true });
 
-function closeTerminal() {
-  if (!terminal) return;
-  terminal.classList.add('hidden');
-}
-
-if (termCloseBtn) {
-  termCloseBtn.addEventListener('click', closeTerminal);
-}
-
-if (termInput) {
-  termInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      const command = termInput.value.trim().toLowerCase();
-      termInput.value = '';
-      
-      // Append user command to history
-      const historyLine = document.createElement('div');
-      historyLine.innerHTML = `<span class="terminal-prompt">fady@portfolio:~$</span> ${command}`;
-      termOutput.appendChild(historyLine);
-      
-      processCommand(command);
-    }
+  function updateTheme() {
+    const dark = document.documentElement.dataset.theme === 'dark';
+    $('themeToggle').setAttribute('aria-pressed', String(dark));
+    $('themeToggle').setAttribute('aria-label', 'Switch to ' + (dark ? 'light' : 'dark') + ' theme');
+    document.querySelector('meta[name="theme-color"]').content = dark ? '#1c2825' : '#eeeee7';
+  }
+  $('themeToggle').addEventListener('click', () => {
+    document.documentElement.classList.add('theme-switching');
+    document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('theme', document.documentElement.dataset.theme); } catch { /* The theme still works without storage. */ }
+    updateTheme();
+    requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('theme-switching')));
   });
-  
-  // Keep focus on input when clicking inside terminal
-  terminal.addEventListener('click', () => {
-    termInput.focus();
+  updateTheme();
+  function setMenu(open, returnFocus = false) {
+    $('navLinks').classList.toggle('open', open);
+    $('navToggle').setAttribute('aria-expanded', String(open));
+    $('navToggle').lastElementChild.textContent = open ? '−' : '+';
+    if (returnFocus) $('navToggle').focus();
+  }
+  $('navToggle').addEventListener('click', () => setMenu(!$('navLinks').classList.contains('open')));
+  document.addEventListener('click', event => {
+    if (!event.target.closest('#navbar')) setMenu(false);
+    const anchor = event.target.closest('a[href^="#"]');
+    if (!anchor) return;
+    const target = document.getElementById(anchor.getAttribute('href').slice(1));
+    if (target?.matches('[data-project]') && target.hidden) { state.filter = 'all'; applyFilter(); }
+    if (anchor.closest('#navLinks')) setMenu(false);
   });
-}
-
-function processCommand(cmd) {
-  if (!cmd) return;
-  
-  let response = "";
-  switch(cmd) {
-    case 'help':
-      response = "Available commands:\n- whoami   : Display biography\n- skills   : List technical skills\n- projects : View latest projects\n- clear    : Clear terminal screen\n- hire     : Contact for opportunities\n- exit     : Close the terminal";
-      break;
-    case 'whoami':
-      response = "Fady Fawzy\nComputer Engineering Student @ Cairo University.\nPassionate about Embedded Systems, AI, and Web Development.";
-      break;
-    case 'skills':
-      response = "Languages: C/C++, Python, JavaScript/TypeScript, ARM Assembly\nEmbedded : STM32, Arduino, FreeRTOS, Proteus, Altium\nWeb      : HTML, CSS, React, Node.js, Firebase\nAI       : Machine Learning, Data Science";
-      break;
-    case 'projects':
-      response = "Fetching projects from database...\n[1] Innovative Lampshade (Hardware/Design)\n[2] Restaurant Management System (C++)\n[3] Smart Nurse Robot (STM32, ARM Assembly)\n(Type 'exit' to view full details on the main site!)";
-      break;
-    case 'hire':
-      response = "Initiating contact protocol... Redirecting you to my email!";
-      setTimeout(() => {
-        window.location.href = "mailto:fady.fawzy2006@gmail.com";
-      }, 2000);
-      break;
-    case 'clear':
-      termOutput.innerHTML = '';
-      return;
-    case 'exit':
-      closeTerminal();
-      return;
-    default:
-      if (cmd.startsWith('sudo')) {
-        response = "Nice try, but I have backups! 😉";
-      } else {
-        response = `Command not found: ${cmd}. Type 'help' for a list of commands.`;
-      }
-  }
-  
-  typeTerminalText(response, 0, () => {
-    // scroll to bottom
-    const termBody = document.getElementById('termBody');
-    if (termBody) termBody.scrollTop = termBody.scrollHeight;
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && $('navLinks').classList.contains('open')) setMenu(false, true);
   });
-}
-
-function typeTerminalText(text, index, callback) {
-  if (index === 0) {
-    const newLine = document.createElement('div');
-    newLine.className = 'term-bot-line';
-    termOutput.appendChild(newLine);
-  }
-  
-  const lines = document.querySelectorAll('.term-bot-line');
-  const currentLine = lines[lines.length - 1];
-  
-  if (index < text.length) {
-    if (text.charAt(index) === '\n') {
-      currentLine.innerHTML += '<br/>';
-    } else if (text.charAt(index) === ' ') {
-      currentLine.innerHTML += '&nbsp;';
-    } else {
-      currentLine.innerHTML += text.charAt(index);
-    }
-    
-    // Auto-scroll while typing
-    const termBody = document.getElementById('termBody');
-    if (termBody) termBody.scrollTop = termBody.scrollHeight;
-    
-    setTimeout(() => {
-      typeTerminalText(text, index + 1, callback);
-    }, 15); // Fast typing speed
-  } else {
-    if (callback) callback();
-  }
-}
-
-function activateHelloWorld() {
-  const overlay = document.createElement('div');
-  overlay.id = "helloWorldOverlay";
-  overlay.innerHTML = `
-    <div class="hw-matrix-bg"></div>
-    <div class="hw-content">
-      <div class="hw-code-snippets"></div>
-      <h1 class="hw-title">HELLO WORLD</h1>
-      <p class="hw-subtitle">The sentence that started it all.</p>
-      <button class="hw-close">Return to Reality</button>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-
-  // Add massive CSS for the overlay dynamically
-  const style = document.createElement('style');
-  style.id = "hwStyle";
-  style.innerHTML = `
-    #helloWorldOverlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: #050505; z-index: 999999;
-      display: flex; justify-content: center; align-items: center;
-      flex-direction: column; overflow: hidden;
-      animation: hwFadeIn 1.5s forwards;
-    }
-    .hw-matrix-bg {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: repeating-linear-gradient(0deg, rgba(0,255,0,0.03) 0, rgba(0,255,0,0.03) 1px, transparent 1px, transparent 2px);
-      pointer-events: none;
-    }
-    .hw-content {
-      position: relative; z-index: 2; text-align: center; width: 100%;
-    }
-    .hw-title {
-      font-size: clamp(3rem, 10vw, 8rem); color: #10b981; font-family: 'JetBrains Mono', monospace;
-      text-shadow: 0 0 20px rgba(16, 185, 129, 0.5), 0 0 40px rgba(16, 185, 129, 0.3);
-      margin: 0; animation: hwGlitch 3s infinite;
-    }
-    .hw-subtitle {
-      font-size: clamp(1rem, 3vw, 1.5rem); color: #fff; letter-spacing: 5px; text-transform: uppercase;
-      margin-top: 15px; opacity: 0; animation: hwFadeInUp 2s 1.5s forwards;
-    }
-    .hw-close {
-      margin-top: 50px; padding: 15px 35px; font-size: 1.1rem;
-      background: transparent; color: #10b981; border: 2px solid #10b981;
-      cursor: pointer; opacity: 0; animation: hwFadeInUp 2s 2.5s forwards;
-      transition: all 0.3s; font-family: 'JetBrains Mono', monospace; text-transform: uppercase;
-      letter-spacing: 2px;
-    }
-    .hw-close:hover { background: #10b981; color: #000; box-shadow: 0 0 25px #10b981; }
-    
-    .hw-code-snippets {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 100vw; height: 100vh; pointer-events: none; z-index: -1;
-    }
-    .hw-snippet {
-      position: absolute; color: rgba(16, 185, 129, 0.3); font-family: 'JetBrains Mono', monospace;
-      font-size: clamp(0.8rem, 2vw, 1.4rem); white-space: pre; opacity: 0;
-      animation: hwFlash 4s forwards; font-weight: 600;
-    }
-
-    @keyframes hwFadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes hwFadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes hwFlash { 0% { opacity: 0; transform: scale(0.8); } 5% { opacity: 1; transform: scale(1.2); } 10% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(0.9); } }
-    @keyframes hwGlitch {
-      0%, 100% { text-shadow: 0 0 20px rgba(16,185,129,0.5), 0 0 40px rgba(16,185,129,0.3); transform: translate(0); }
-      92% { text-shadow: 0 0 20px rgba(16,185,129,0.5), 0 0 40px rgba(16,185,129,0.3); transform: translate(0); }
-      93% { text-shadow: 4px 0 0 #ff003c, -4px 0 0 #00e6f6; transform: translate(-2px, 2px); }
-      95% { text-shadow: -4px 0 0 #ff003c, 4px 0 0 #00e6f6; transform: translate(2px, -2px); }
-      97% { text-shadow: 0 0 20px rgba(16,185,129,0.5); transform: translate(0); }
-    }
-  `;
-  document.head.appendChild(style);
-
-  // Programming languages snippets logic
-  const snippets = [
-    `printf("Hello, World!\\n");`,
-    `print("Hello, World!")`,
-    `std::cout << "Hello, World!" << std::endl;`,
-    `console.log("Hello, World!");`,
-    `System.out.println("Hello, World!");`,
-    `echo "Hello, World!"`,
-    `fmt.Println("Hello, World!")`,
-    `mov ah, 09h\\nmov dx, offset msg\\nint 21h`,
-    `++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.`,
-    `DISPLAY 'HELLO WORLD'.`,
-    `<?php echo "Hello, World!"; ?>`,
-    `putStrLn "Hello, World!"`
-  ];
-
-  const snippetsContainer = overlay.querySelector('.hw-code-snippets');
-  let snippetCount = 0;
-  
-  const snippetInterval = setInterval(() => {
-    if (snippetCount > 25) {
-      clearInterval(snippetInterval);
-      return;
-    }
-    const snippet = document.createElement('div');
-    snippet.className = 'hw-snippet';
-    snippet.innerText = snippets[Math.floor(Math.random() * snippets.length)];
-    // Random position within safe bounds
-    snippet.style.top = Math.random() * 80 + 10 + '%';
-    snippet.style.left = Math.random() * 80 + 10 + '%';
-    snippetsContainer.appendChild(snippet);
-    snippetCount++;
-    
-    // Auto remove snippet from DOM after animation
-    setTimeout(() => { snippet.remove(); }, 4000);
-  }, 250); // spawn a new snippet every 250ms
-
-  // Close logic
-  overlay.querySelector('.hw-close').addEventListener('click', () => {
-    overlay.style.transition = 'opacity 0.8s ease';
-    overlay.style.opacity = '0';
-    clearInterval(snippetInterval);
-    setTimeout(() => {
-      overlay.remove();
-      style.remove();
-    }, 800);
-  });
-}
-
-// ===== TYPING EFFECT ON HERO TITLE =====
-// Cyclic typewriter animation for descriptive headings under the main hero.
-// States:
-// - Typing: Types 1 character forward every 80ms.
-// - Deleting: Erases 1 character back every 40ms (double speed).
-// - Pause on typed: Pauses 2500ms after a title is fully completed.
-// - Pause on deleted: Pauses 400ms after erasing finishes before switching indexes.
-// - Startup delay: Waits 1600ms on initial page load to sync with sliding visual entry animations.
-const heroTitle = document.querySelector('.hero-title');
-if (heroTitle) {
-  const titles = [
-    'Computer Engineering Student',
-    'Embedded Systems Enthusiast',
-    'Web Developer',
-    'AI Explorer',
-    'Problem Solver'
-  ];
-  let titleIndex = 0;
-  let charIndex = 0;
-  let isDeleting = false;
-  let typingSpeed = 80;
-
-  function typeEffect() {
-    const current = titles[titleIndex];
-
-    if (isDeleting) {
-      heroTitle.textContent = current.substring(0, charIndex - 1);
-      charIndex--;
-      typingSpeed = 40;
-    } else {
-      heroTitle.textContent = current.substring(0, charIndex + 1);
-      charIndex++;
-      typingSpeed = 80;
-    }
-
-    // State machine check
-    if (!isDeleting && charIndex === current.length) {
-      typingSpeed = 2500; // Pause once fully typed
-      isDeleting = true;
-    } else if (isDeleting && charIndex === 0) {
-      isDeleting = false;
-      titleIndex = (titleIndex + 1) % titles.length; // Loop back to start
-      typingSpeed = 400; // Pause before starting the next title
-    }
-
-    setTimeout(typeEffect, typingSpeed);
-  }
-
-  setTimeout(typeEffect, 1600);
-}
-
-// ===== PARALLAX ON HERO AVATAR (delayed to not conflict with entry animation) =====
-// Moves the avatar image slightly towards the cursor to create depth.
-// Math details:
-// - normalizes coordinate range to -0.5 / +0.5.
-// - Multiplies by 18, limiting displacement range to +/- 9px.
-// - 1500ms startup delay protects rendering resources from fighting the CSS entry anim.
-const heroVisual = document.querySelector('.hero-visual');
-
-if (heroVisual && !isTouchDevice()) {
-  function heroParallaxHandler(e) {
-    const x = (e.clientX / window.innerWidth - 0.5) * 18;
-    const y = (e.clientY / window.innerHeight - 0.5) * 18;
-    heroVisual.style.transform = `translate(${x}px, ${y}px)`;
-  }
-  setTimeout(() => {
-    window.addEventListener('mousemove', heroParallaxHandler);
-  }, 1500);
-}
-
-// ===== CUSTOM CURSOR =====
-// Replaces default operating system cursor with dual canvas-styled cursor divs.
-// Components:
-// 1. '.cursor-dot' (anchored directly to coordinates, immediate response).
-// 2. '.cursor-outline' (follows dot via Linear Interpolation (Lerp) algorithm for smooth lag).
-// Lerp: currentOutlineX += (cursorTargetX - currentOutlineX) * 0.15.
-// Updates cursor position 15% closer to target per loop, creating a soft elastic lag.
-// Powered by hardware acceleration: translate3d avoids layout re-flows.
-let cursorX = window.innerWidth / 2;
-let cursorY = window.innerHeight / 2;
-let outlineX = window.innerWidth / 2;
-let outlineY = window.innerHeight / 2;
-
-window.addEventListener('mousemove', (e) => {
-  cursorX = e.clientX;
-  cursorY = e.clientY;
-});
-
-function loopCursor() {
-  // Lerp smoothing calculations
-  outlineX += (cursorX - outlineX) * 0.15;
-  outlineY += (cursorY - outlineY) * 0.15;
-  
-  if (cursorDot) {
-    cursorDot.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0) translate(-50%, -50%)`;
-  }
-  if (cursorOutline) {
-    cursorOutline.style.transform = `translate3d(${outlineX}px, ${outlineY}px, 0) translate(-50%, -50%)`;
-  }
-  requestAnimationFrame(loopCursor);
-}
-if (!isTouchDevice()) loopCursor();
-
-// Connect custom cursor hover events to interactive items (expands outline circle, overlays semi-transparent color)
-function initCustomCursorHoverListeners() {
-  const interactables = document.querySelectorAll('a, button, input, textarea, .project-card, .skill-tag');
-
-  interactables.forEach(el => {
-    el.addEventListener('mouseenter', () => {
-      if (cursorOutline) {
-        cursorOutline.style.width = '58px';
-        cursorOutline.style.height = '58px';
-        cursorOutline.style.backgroundColor = 'rgba(108, 99, 255, 0.1)';
-        cursorOutline.style.borderColor = 'transparent';
-      }
-    });
-
-    el.addEventListener('mouseleave', () => {
-      if (cursorOutline) {
-        cursorOutline.style.width = '38px';
-        cursorOutline.style.height = '38px';
-        cursorOutline.style.backgroundColor = 'transparent';
-        cursorOutline.style.borderColor = 'rgba(108, 99, 255, 0.5)';
-      }
-    });
-  });
-}
-initCustomCursorHoverListeners();
-
-// ===== THEME TOGGLE =====
-// Manages light theme toggling and state persistence.
-// Functions:
-// - Parses existing setting from localStorage on load.
-// - Switches sun ☀️ and moon 🌙 icons.
-// - Toggles '.light-theme' class on body element.
-// - Applies a spin/scale transform to the toggle button during interaction.
-const themeToggle = document.getElementById('themeToggle');
-const bodyElement = document.body;
-
-if (themeToggle) {
-  const savedTheme = localStorage.getItem('theme');
-  if (savedTheme === 'light') {
-    bodyElement.classList.add('light-theme');
-    themeToggle.innerHTML = '<i data-feather="sun"></i>';
-    themeToggle.setAttribute('aria-pressed', 'true');
-  } else {
-    themeToggle.innerHTML = '<i data-feather="moon"></i>';
-    themeToggle.setAttribute('aria-pressed', 'false');
-  }
-
-  themeToggle.addEventListener('click', () => {
-    bodyElement.classList.toggle('light-theme');
-    const isLight = bodyElement.classList.contains('light-theme');
-
-    localStorage.setItem('theme', isLight ? 'light' : 'dark');
-    themeToggle.innerHTML = isLight ? '<i data-feather="sun"></i>' : '<i data-feather="moon"></i>';
-    themeToggle.setAttribute('aria-pressed', isLight ? 'true' : 'false');
-    if (typeof feather !== 'undefined') feather.replace();
-
-    // Spin animation trigger
-    themeToggle.style.transform = 'rotate(360deg) scale(1.2)';
-    setTimeout(() => {
-      themeToggle.style.transform = '';
-    }, 350);
-  });
-}
-
-// ===== PROJECT FILTERING =====
-// Filters project cards in the grid.
-// Uses custom classes '.hiding' and '.hide' to trigger CSS transitions and layout removals.
-// Animation sequence details:
-// To show cards:
-// 1. Remove '.hide' (display: none) instantly so the card enters the document grid.
-// 2. Apply '.hiding' (opacity: 0, scale: 0.88) immediately to establish start state.
-// 3. Trigger double requestAnimationFrame to ensure browser registers display state,
-//    then remove '.hiding', initiating a smooth fade/scale transition.
-// To hide cards:
-// 1. Apply '.hiding' (opacity: 0, scale: 0.88) to start fade-out.
-// 2. Set 320ms timeout (matching CSS transition length), then apply '.hide' (display: none) to remove it from layout.
-const filterBtns = document.querySelectorAll('.filter-btn');
-const projectCardsGrid = document.querySelectorAll('.project-card');
-
-filterBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    filterBtns.forEach(b => {
-      b.classList.remove('active');
-      b.setAttribute('aria-pressed', 'false');
-    });
-    btn.classList.add('active');
-    btn.setAttribute('aria-pressed', 'true');
-
-    const filterValue = btn.getAttribute('data-filter');
-
-    projectCardsGrid.forEach(card => {
-      const category = card.getAttribute('data-category');
-
-      if (filterValue === 'all' || filterValue === category) {
-        clearTimeout(card.hideTimeout);
-        card.classList.remove('hide');
-        card.classList.add('hiding');
-        
-        // Double RAF forces layout updates before removing visibility classes
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            card.classList.remove('hiding');
-          });
+  const wideScreen = matchMedia('(min-width: 901px)');
+  wideScreen.addEventListener('change', event => { if (event.matches) setMenu(false); });
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        document.querySelectorAll('#navLinks a').forEach(anchor => {
+          if (anchor.getAttribute('href') === '#' + entry.target.id) anchor.setAttribute('aria-current', 'location');
+          else anchor.removeAttribute('aria-current');
         });
-      } else {
-        card.classList.add('hiding');
-        clearTimeout(card.hideTimeout);
-        card.hideTimeout = setTimeout(() => {
-          card.classList.add('hide');
-          card.classList.remove('hiding');
-        }, 320);
-      }
-    });
-  });
-});
-
-// ===== BACK TO TOP =====
-// Smoothly scrolls back to top coordinate when clicking the floating arrow.
-if (backToTop) {
-  backToTop.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-}
-
-// ===== PARTICLE CANVAS =====
-// Interactive, lightweight HTML5 Canvas particle physics system.
-// Features:
-// - Auto-scales connection distances and particle counts based on viewport size.
-// - Limits particle counts on small viewports to protect mobile CPU cycles.
-// - Connecting lines ('nodes') draw when particles approach within 120px.
-// - Connection line alpha scales inversely with distance.
-// - Triggers wrap-around coordinates when particles exit screen bounds.
-// - Listens to visibilitychange, pausing loops when user leaves the tab.
-(function initParticles() {
-  const canvas = document.getElementById('particleCanvas');
-  if (!canvas) return;
-
-  const ctx = canvas.getContext('2d');
-  let particles = [];
-  let animFrame;
-
-  // Window resize handler: auto-rebuilds particle count to fit size
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+      });
+    }, { rootMargin: '-15% 0px -65% 0px', threshold: 0 });
+    document.querySelectorAll('main > section[id]').forEach(section => observer.observe(section));
   }
 
-  resize();
-  window.addEventListener('resize', () => {
-    resize();
-    initParticleArray();
-  });
-
-  // Clamp particles count (55 on widescreen, lower on mobile)
-  const particleCount = Math.min(55, Math.floor(window.innerWidth / 24));
-
-  function createParticle() {
-    return {
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      r: Math.random() * 1.5 + 0.4, // Particle radius
-      dx: (Math.random() - 0.5) * 0.3, // Velocity X
-      dy: (Math.random() - 0.5) * 0.3, // Velocity Y
-      opacity: Math.random() * 0.45 + 0.1
-    };
+  // Preserve the hidden terminal and helloworld, with safe text and modal focus.
+  const terminal = $('devTerminal');
+  function terminalLine(value, className) { $('termOutput').append(el('div', value, className)); $('termBody').scrollTop = $('termBody').scrollHeight; }
+  function openTerminal() {
+    if (document.querySelector('dialog[open]')) return;
+    $('termOutput').replaceChildren();
+    terminalLine('Fady’s workbench / developer notes\nType help for commands.');
+    openDialog(terminal, $('termInput'));
   }
-
-  function initParticleArray() {
-    particles = Array.from({ length: particleCount }, createParticle);
-  }
-
-  initParticleArray();
-
-  // Primary animation render frame loop
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const isLight = document.body.classList.contains('light-theme');
-
-    particles.forEach((p, i) => {
-      // Physics movement
-      p.x += p.dx;
-      p.y += p.dy;
-
-      // Screen boundary wrap-around checks
-      if (p.x < 0) p.x = canvas.width;
-      if (p.x > canvas.width) p.x = 0;
-      if (p.y < 0) p.y = canvas.height;
-      if (p.y > canvas.height) p.y = 0;
-
-      // Render single particle
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = isLight
-        ? `rgba(79, 70, 229, ${p.opacity * 0.5})`
-        : `rgba(108, 99, 255, ${p.opacity})`;
-      ctx.fill();
-
-      // Render connection lines
-      for (let j = i + 1; j < particles.length; j++) {
-        const p2 = particles[j];
-        const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
-        
-        if (dist < 120) {
-          // Dynamic alpha calculations (further distances draw thinner and lighter)
-          const alpha = (1 - dist / 120) * 0.1 * p.opacity;
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(p2.x, p2.y);
-          ctx.strokeStyle = isLight
-            ? `rgba(79, 70, 229, ${alpha * 0.4})`
-            : `rgba(108, 99, 255, ${alpha})`;
-          ctx.lineWidth = 0.6;
-          ctx.stroke();
-        }
-      }
-    });
-
-    animFrame = requestAnimationFrame(draw);
-  }
-
-  draw();
-
-  // Performance guard: suspends canvas loop when tab is unfocused/hidden
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      cancelAnimationFrame(animFrame);
-    } else {
-      draw();
+  $('termCloseBtn').addEventListener('click', () => terminal.close());
+  $('terminalForm').addEventListener('submit', event => {
+    event.preventDefault();
+    const raw = $('termInput').value.trim(); const command = raw.toLowerCase();
+    $('termInput').value = ''; if (!raw) return;
+    terminalLine('fady:~$ ' + raw, 'command-history');
+    switch (command) {
+      case 'help': terminalLine('whoami   biography & separate academic records\nskills   current technical inventory\nprojects current project list\nclear    clear the output\nhire     contact details\nexit     close the terminal\nhelloworld a familiar first step'); break;
+      case 'whoami': terminalLine(C.profile.name + '\n' + C.profile.focus + '\n' + C.profile.degree + ' @ Cairo University · Expected ' + C.profile.graduation + '\nComputer Engineering Department: ' + state.academic.department.rank + ' · GPA ' + state.academic.department.gpa + '\nPreparatory Engineering Year: ' + state.academic.preparatory.rank + ' · GPA ' + state.academic.preparatory.gpa); break;
+      case 'skills': terminalLine(Object.entries(state.skills).map(([category, items]) => category + ': ' + items.join(', ')).join('\n')); break;
+      case 'projects': terminalLine(state.projects.length + ' projects\n' + state.projects.map(p => p.title + ' (' + p.year + ')').join('\n')); break;
+      case 'clear': $('termOutput').replaceChildren(); break;
+      case 'hire': terminalLine('Email: ' + C.profile.email + '\nLinkedIn: ' + C.profile.linkedin); break;
+      case 'exit': terminal.close(); break;
+      case 'helloworld': terminal.close(); openDialog($('helloWorldDialog'), $('helloClose')); break;
+      default: terminalLine('Command not found: ' + raw + '\nType help for available commands.');
     }
   });
+  $('helloClose').addEventListener('click', () => $('helloWorldDialog').close());
+  let sequence = '';
+  document.addEventListener('keydown', event => {
+    if (document.querySelector('dialog[open]') || event.target.closest('input, textarea, select, [contenteditable]')) return;
+    if (event.ctrlKey && event.key === '\\') { event.preventDefault(); openTerminal(); return; }
+    if (event.ctrlKey || event.metaKey || event.altKey || event.key.length !== 1) return;
+    sequence = (sequence + event.key.toLowerCase()).slice(-14);
+    if (sequence.endsWith('fady') || sequence.endsWith('terminal')) { sequence = ''; openTerminal(); }
+    if (sequence.endsWith('helloworld')) { sequence = ''; openDialog($('helloWorldDialog'), $('helloClose')); }
+  });
+
+  let toastTimer;
+  $('copyEmail').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(C.profile.email); $('copyToast').textContent = 'Email copied'; }
+    catch { $('copyToast').textContent = 'Select the email address to copy it.'; }
+    $('copyToast').classList.add('visible'); clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => $('copyToast').classList.remove('visible'), 3000);
+  });
+  async function timed(promise, milliseconds = 8000) {
+    let timeout;
+    try { return await Promise.race([promise, new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('Request timed out')), milliseconds); })]); }
+    finally { clearTimeout(timeout); }
+  }
+  function setFormStatus(id, message, error = false) { $(id).textContent = message; $(id).classList.toggle('error', error); }
+  $('contactForm').addEventListener('submit', async event => {
+    event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button[type="submit"]');
+    if (button.disabled) return;
+    const original = button.textContent; button.disabled = true; button.textContent = 'Sending…';
+    setFormStatus('contactStatus', 'Sending your message…');
+    const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 12000);
+    try {
+      const response = await fetch(form.action, { method: 'POST', body: new FormData(form), headers: { Accept: 'application/json' }, signal: controller.signal });
+      if (!response.ok) throw new Error('Message rejected');
+      setFormStatus('contactStatus', 'Message sent. Thanks for the note.'); form.reset();
+    } catch { setFormStatus('contactStatus', 'Message wasn’t sent. Your text is still here. Try again or use the email link.', true); }
+    finally { clearTimeout(timeout); button.disabled = false; button.textContent = original; }
+  });
+  function saveSubscriberLocally(email) {
+    try {
+      const stored = JSON.parse(localStorage.getItem('subscribers') || '[]');
+      const items = Array.isArray(stored) ? stored.filter(value => typeof value === 'string') : [];
+      if (!items.includes(email)) items.push(email);
+      localStorage.setItem('subscribers', JSON.stringify(items)); return true;
+    } catch { return false; }
+  }
+  $('newsletterForm').addEventListener('submit', async event => {
+    event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button');
+    if (button.disabled) return;
+    const email = $('newsletterEmail').value.trim(); button.disabled = true;
+    setFormStatus('newsletterStatus', 'Sending subscription request…');
+    const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 12000);
+    // Firestore confirmation is independent of the opaque Apps Script response.
+    const firestoreRequest = db ? timed(db.collection('subscribers').add({ email, timestamp: window.firebase.firestore.FieldValue.serverTimestamp() })).then(() => true, () => false) : Promise.resolve(false);
+    let transportSent = false;
+    try {
+      const response = await fetch(form.action, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ email }), signal: controller.signal });
+      transportSent = response.ok || response.type === 'opaque';
+    } catch { /* Feedback below distinguishes a send attempt from confirmation. */ }
+    const cloudSaved = await firestoreRequest;
+    clearTimeout(timeout); button.disabled = false;
+    if (cloudSaved) { setFormStatus('newsletterStatus', 'Subscription saved.'); form.reset(); }
+    else if (transportSent) { setFormStatus('newsletterStatus', 'Request sent; delivery could not be confirmed.'); }
+    else {
+      const saved = saveSubscriberLocally(email);
+      setFormStatus('newsletterStatus', saved ? 'Saved on this device only. No subscription was confirmed; retry when connected.' : 'Subscription wasn’t saved. Please try again when connected.', true);
+    }
+  });
+
+  function loadScript(src) {
+    return timed(new Promise((resolve, reject) => {
+      const script = document.createElement('script'); script.src = src; script.async = true;
+      script.onload = resolve; script.onerror = reject; document.head.append(script);
+    }), 6000);
+  }
+  async function initializeFirebase() {
+    if (typeof firebaseConfig === 'undefined' || !firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith('PLACEHOLDER')) return false;
+    try {
+      if (!window.firebase) await loadScript('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
+      if (!window.firebase.firestore) await loadScript('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js');
+      if (!window.firebase.apps.length) window.firebase.initializeApp(firebaseConfig);
+      db = window.firebase.firestore(); return true;
+    } catch { return false; }
+  }
+  async function syncPortfolioData() {
+    if (syncPromise) return syncPromise;
+    syncPromise = (async () => {
+      if (!db && !await initializeFirebase()) return;
+      const results = await Promise.allSettled([
+        timed(db.collection('stats').doc('summary').get()),
+        timed(db.collection('projects').get()),
+        timed(db.collection('skills').get())
+      ]);
+      if (results[0].status === 'fulfilled' && results[0].value.exists) state.academic = C.mergeAcademic(results[0].value.data());
+      if (results[1].status === 'fulfilled') state.projects = C.mergeProjects(results[1].value.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      if (results[2].status === 'fulfilled') state.skills = C.mergeSkills(results[2].value.docs.map(doc => doc.data()));
+      renderAcademic(); renderProjects(); renderSkills();
+    })().finally(() => { syncPromise = null; });
+    return syncPromise;
+  }
+  renderAcademic(); renderProjects(); renderExperience(); renderCredentials(); renderSkills();
+  // Useful for an owner reviewing content changes without a full reload.
+  window.PortfolioApp = Object.freeze({ refresh: syncPortfolioData });
+  syncPortfolioData();
 })();
-
-// ===== NEWSLETTER FORM HANDLER =====
-// Drives a live, fully functional subscription pipeline.
-// Actions:
-// 1. Sends the email address asynchronously to Fady's Formspree (xvnglkkr) endpoint.
-// 2. Stores the email address in a persistent local database inside the browser's localStorage
-//    under the key 'subscribers'.
-// 3. Synchronizes email registrations to Google Firebase Firestore under collection 'subscribers' in real-time if configured.
-// 4. Implements advanced visual feedback:
-//    - "Subscribing..." loader state + disables input fields to prevent layout thrashing and duplicate requests.
-//    - "✓ Subscribed!" success state with green brand gradients.
-// 5. Returns button styles and active input states after 3 seconds.
-async function handleNewsletterSubmit(e) {
-  e.preventDefault();
-  const form = e.target;
-  const input = form.querySelector('input');
-  const button = form.querySelector('button');
-  const originalHTML = button.innerHTML;
-
-  const email = input.value.trim();
-
-  // Lock button size to prevent layout shift
-  button.style.minWidth = button.offsetWidth + 'px';
-  button.style.minHeight = button.offsetHeight + 'px';
-
-  // Show immediate subscribing visual cue
-  button.innerHTML = '<span>Subscribing...</span>';
-  button.style.pointerEvents = 'none';
-  input.style.opacity = '0.5';
-  input.disabled = true;
-
-  try {
-    const response = await fetch(form.action, {
-      method: form.method,
-      mode: 'no-cors',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: `email=${encodeURIComponent(email)}`
-    });
-
-    if (response.ok || response.type === 'opaque') {
-      // Local Database Persistence
-      let subscribers = JSON.parse(localStorage.getItem('subscribers') || '[]');
-      if (!subscribers.includes(email)) {
-        subscribers.push(email);
-        localStorage.setItem('subscribers', JSON.stringify(subscribers));
-      }
-
-      // Live Firestore Database Persistence
-      if (isFirebaseEnabled && db) {
-        await db.collection("subscribers").add({
-          email: email,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      }
-
-      button.innerHTML = '<span>✓ Subscribed!</span>';
-      button.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-      form.reset();
-    } else {
-      throw new Error('Newsletter request rejected by server.');
-    }
-  } catch (error) {
-    // Save locally as fallback when network is unavailable
-    let subscribers = JSON.parse(localStorage.getItem('subscribers') || '[]');
-    if (!subscribers.includes(email)) {
-      subscribers.push(email);
-      localStorage.setItem('subscribers', JSON.stringify(subscribers));
-    }
-    
-    if (isFirebaseEnabled && db) {
-      try {
-        await db.collection("subscribers").add({
-          email: email,
-          timestamp: new Date()
-        });
-      } catch (err) {}
-    }
-    
-    // Show accurate offline fallback status (amber instead of green)
-    button.innerHTML = '<span>✓ Saved Locally!</span>';
-    button.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-    form.reset();
-  } finally {
-    setTimeout(() => {
-      button.innerHTML = originalHTML;
-      button.style.background = '';
-      button.style.pointerEvents = '';
-      button.style.minWidth = '';
-      button.style.minHeight = '';
-      input.style.opacity = '1';
-      input.disabled = false;
-      if (typeof feather !== 'undefined') feather.replace();
-    }, 3000);
-  }
-}
-
-// ===== FLOATING CONTACT BUTTON =====
-// Click handler scrolls to #contact section.
-// Scroll-based visibility is managed in the unified onScroll() handler.
-if (floatingContactBtn) {
-  floatingContactBtn.addEventListener('click', () => {
-    const contactSection = document.getElementById('contact');
-    if (contactSection) {
-      contactSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  });
-}
-
-// Duplicate counter system removed — handled by animateCounters() + counterObserver above.
-
-// ===== CLICK-TO-COPY ON CONTACT LINKS =====
-// Simplifies contact exchanges by allowing email/phone clicks to copy text automatically.
-// Mechanics:
-// - Targets elements with 'data-copy' attribute (which holds the text string to copy).
-// - Hijacks anchor click, pushes the value to navigator.clipboard.
-// - Displays bottom center 'copy-toast' box with copy verification.
-// - Sets a 2.5 second timeout to hide toast.
-// - Fallback: If clipboard API fails or browser denies permissions, opens native href link.
-const copyableLinks = document.querySelectorAll('[data-copy]');
-const copyToast = document.getElementById('copyToast');
-let toastTimeout = null;
-
-copyableLinks.forEach(link => {
-  link.addEventListener('click', (e) => {
-    // On touch devices, allow default behavior (open email client / phone dialer)
-    if (isTouchDevice()) return;
-
-    e.preventDefault();
-    const text = link.getAttribute('data-copy');
-
-    navigator.clipboard.writeText(text).then(() => {
-      if (copyToast) {
-        copyToast.textContent = `Copied: ${text}`;
-        copyToast.classList.add('visible');
-
-        if (toastTimeout) clearTimeout(toastTimeout);
-        toastTimeout = setTimeout(() => {
-          copyToast.classList.remove('visible');
-        }, 2500);
-      }
-    }).catch(() => {
-      // Direct fallback to default URI schema (mailto: or tel:)
-      window.location.href = link.getAttribute('href');
-    });
-  });
-});
-
-// Parallax logic integrated into the unified onScroll() handler above.
-
-// ===== ADVANCED CURSER GLOW EFFECT (Creative Enhancement) - REMOVED =====
-// Feature removed per user request
-
-// ===== FIREBASE DATA SYNC & RENDERING =====
-// Fetches GPA, Rank, Projects count, active skills inventory, and verified project cards
-// in real-time from Firestore collections, overriding static fallbacks dynamically.
-async function syncPortfolioData() {
-  if (!isFirebaseEnabled || !db) return;
-
-  try {
-    // 1. Sync Statistics
-    const statsDoc = await db.collection("stats").doc("summary").get();
-    if (statsDoc.exists) {
-      const statsData = statsDoc.data();
-      const gpaEl = document.querySelector('.hero-stats .stat-item:nth-child(1) .stat-number');
-      const badgeGpaEl = document.querySelector('.badge-gpa .badge-value');
-      const rankEl = document.querySelector('.hero-stats .stat-item:nth-child(2) .stat-number');
-      const countEl = document.querySelector('.hero-stats .stat-item:nth-child(3) .stat-number');
-
-      if (statsData.gpa) {
-        if (gpaEl) { gpaEl.setAttribute('data-count', statsData.gpa); gpaEl.textContent = '0'; }
-        if (badgeGpaEl) { badgeGpaEl.setAttribute('data-count', statsData.gpa); badgeGpaEl.textContent = '0'; }
-      }
-      if (statsData.rank && rankEl) {
-        rankEl.textContent = statsData.rank;
-      }
-      if (statsData.projectsCount && countEl) {
-        countEl.setAttribute('data-count', statsData.projectsCount);
-        countEl.textContent = '0';
-      }
-
-      // Re-trigger animations so the new values count up beautifully
-      animateCounters();
-    }
-
-    // 2. Sync Dynamic Skills
-    const skillsSnapshot = await db.collection("skills").get();
-    if (!skillsSnapshot.empty) {
-      skillsSnapshot.forEach(doc => {
-        const categoryData = doc.data();
-        const cat = categoryData.category;
-        const list = categoryData.list || [];
-
-        let targetSelector = "";
-        if (cat === "languages") targetSelector = ".skills-grid .skill-category:nth-child(1) .skill-tags";
-        else if (cat === "tools") targetSelector = ".skills-grid .skill-category:nth-child(2) .skill-tags";
-        else if (cat === "soft") targetSelector = ".skills-grid .skill-category:nth-child(3) .skill-tags";
-
-        const tagsContainer = document.querySelector(targetSelector);
-        if (tagsContainer && list.length > 0) {
-          tagsContainer.innerHTML = list.map(skill => `<span class="skill-tag">${escapeHTML(skill)}</span>`).join('');
-        }
-      });
-    }
-
-    // 3. Sync Dynamic Projects
-    const projectsSnapshot = await db.collection("projects").orderBy("year", "desc").get();
-    const projectsGrid = document.querySelector('.projects-grid');
-    if (!projectsSnapshot.empty && projectsGrid) {
-      let projectsHTML = "";
-      let index = 1;
-      
-      projectsSnapshot.forEach(doc => {
-        const project = doc.data();
-        const delayClass = `reveal-delay-${(index % 3) || 3}`;
-        const repoLinkHTML = project.repoLink ? `<div class="project-links"><a href="${project.repoLink}" target="_blank">View Repository →</a></div>` : "";
-        const tagsHTML = (project.tags || []).map(tag => `<span class="project-tag">${tag}</span>`).join('');
-
-        const iconValue = project.icon || 'cpu';
-        const isFeather = /^[a-z0-9-]+$/i.test(iconValue);
-        const iconHTML = isFeather ? `<i data-feather="${iconValue}"></i>` : iconValue;
-
-        projectsHTML += `
-          <div class="project-card reveal ${delayClass} visible" data-category="${project.category}">
-            <div class="card-light"></div>
-            <div class="project-header">
-              <span class="project-icon">${iconHTML}</span>
-              <span class="project-year">${project.year}</span>
-            </div>
-            <h3 class="project-title">${project.title}</h3>
-            <p class="project-desc">${project.description}</p>
-            <div class="project-tags">${tagsHTML}</div>
-            ${repoLinkHTML}
-          </div>
-        `;
-        index++;
-      });
-
-      projectsGrid.innerHTML = projectsHTML;
-
-      // Re-initialize dynamic reflections & perspective tilts on newly loaded cards!
-      initProjectCardsTilt();
-      // Re-initialize custom cursor hover listeners for dynamic project cards!
-      initCustomCursorHoverListeners();
-      // Render the feather icons
-      if (typeof feather !== 'undefined') feather.replace();
-    }
-  } catch (error) {
-    console.warn("Error fetching dynamic data from Firebase, maintaining static fallback: ", error);
-  }
-}

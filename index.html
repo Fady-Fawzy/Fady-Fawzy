@@ -1,878 +1,98 @@
-<!DOCTYPE html>
-<html lang="en">
-
+<!doctype html>
+<html lang="en" data-theme="light">
 <head>
-  <!-- 
-    ===========================================================================
-    FADY FAWZY PORTFOLIO - FRONT-END MARKUP (index.html)
-    ===========================================================================
-    Purpose: Provides the primary semantic structure and layout for the portfolio website.
-    Designed for premium visuals, high performance, and SEO optimization.
-    
-    Structure Organization:
-    1. Metadata & Fonts: Strict SEO tags, social open-graphs, preloading.
-    2. Utility Elements: Preloader, progress bar, interactive particle canvas, background glow circles.
-    3. Navigation: Glassmorphic navbar with desktop/mobile layout transition.
-    4. Content Layout (<main>): Hero, About, Education, Skills, Experience, Projects, Contact.
-    5. Bottom Utilities: Newsletter subscription, Footer, Back-to-Top trigger, Custom Cursor nodes, Floating CTA.
-    ===========================================================================
-  -->
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="index, follow" />
-  <meta name="theme-color" content="#0A0F1C" />
-
-  <!-- Strict SEO Metadata -->
-  <title>Fady Fawzy — Computer Engineering Student & Developer</title>
-  <link rel="canonical" href="https://fady111-f.github.io/Fady-s-Wep/" />
-  <meta name="description"
-    content="Portfolio of Fady Fawzy Youssef — Computer Engineering student at Cairo University specializing in embedded systems, web development, and AI. GPA 3.94, ranked 3rd." />
-
-  <!-- Open Graph / Social Sharing Meta Tags (Rich snippets when sharing link) -->
-  <meta property="og:title" content="Fady Fawzy — Computer Engineering Student &amp; Developer" />
-  <meta property="og:description"
-    content="Portfolio of Fady Fawzy Youssef — Computer Engineering student at Cairo University specializing in embedded systems, web development, and AI." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://fady111-f.github.io/Fady-s-Wep/" />
-  <meta property="og:image" content="https://fady111-f.github.io/Fady-s-Wep/logo.png" />
-
-  <!-- Favicon and Touch Icon Cache Declarations -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eeeeE7">
+  <title>Fady Fawzy — Aspiring Machine Learning Engineer</title>
+  <meta name="description" content="Fady Fawzy Youssef, aspiring Machine Learning Engineer and Computer Engineering student at Cairo University. Explore reproducible ML pipelines, prediction APIs, industry experience, and the evidence behind the work.">
+  <meta property="og:title" content="Fady Fawzy — Aspiring Machine Learning Engineer">
+  <meta property="og:description" content="From data to a prediction API. Machine learning projects, completed ATR industry experience, and learning evidence from Fady Fawzy.">
+  <meta property="og:type" content="website">
+  <!-- Add canonical/og:url only after the actual deployment address is confirmed. -->
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="icon" type="image/png" href="logo.png">
   <link rel="apple-touch-icon" href="logo.png">
-
-  <!-- Stylesheets (styles.css holds design system, navbar, hero; app.css holds components, responsive grids) -->
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="app.css" />
-
-  <!-- Google Fonts Preconnect Connections (Improves load times for premium typography) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Caveat:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="workbench.css">
+  <script src="theme-init.js"></script>
+  <script defer src="portfolio-content.js"></script><script defer src="firebase-config.js"></script><script defer src="app.js"></script><script defer src="workbench.js"></script>
 </head>
-
-<body>
-  <!-- 
-    ===========================================================================
-    UTILITY WRAPPERS & SCREEN SYSTEMS
-    ===========================================================================
-  -->
-
-  <!-- Loading Screen (Dismissed dynamically inside app.js load event) -->
-  <div class="page-loader" id="pageLoader">
-    <div class="loader-spinner"></div>
-    <div class="loader-text">Loading</div>
-  </div>
-
-  <!-- Scroll Progress Indicator (Thin horizontal indicator bar mapped on screen top) -->
-  <div class="scroll-progress" id="scrollProgress" role="progressbar" aria-valuenow="0" aria-valuemin="0"
-    aria-valuemax="100"></div>
-
-  <!-- Interactive Particle Physics Canvas (Renders connecting nodes on requestAnimationFrame) -->
-  <canvas id="particleCanvas"></canvas>
-
-  <!-- Ambient Glow Orbs (Soft blurred gradient spheres floating slowly in background via styles.css) -->
-  <div class="bg-glow">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
-  </div>
-
-  <!-- 
-    ===========================================================================
-    NAVIGATION HEADER
-    ===========================================================================
-    Navbar behaves as fixed. Toggles class 'scrolled' via unified JS scroll listener.
-    Mobile toggle class '.menu-open' removes backdrop-filter to prevent containing block bugs.
-  -->
-  <nav class="navbar" id="navbar">
-    <div class="container">
-      <!-- Logo redirects to top coordinates -->
-      <a href="#hero" class="nav-logo" aria-label="Fady Fawzy Home"><img src="favicon.svg" alt="FF Logo"
-          class="nav-logo-img"></a>
-
-      <!-- Primary Links Panel (Full screen overlay on mobile) -->
-      <ul class="nav-links" id="navLinks">
-        <li><a href="#about" class="nav-link">About</a></li>
-        <li><a href="#education" class="nav-link">Education</a></li>
-        <li><a href="#skills" class="nav-link">Skills</a></li>
-        <li><a href="#experience" class="nav-link">Experience</a></li>
-        <li><a href="#projects" class="nav-link">Projects</a></li>
-        <!-- Theme Toggle Switch (Persistent state stored inside localStorage) -->
-        <li><button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme" aria-pressed="false"><i
-              data-feather="moon"></i></button></li>
-        <li><a href="#contact" class="btn-primary-custom"
-            style="padding: 10px 22px; font-size: 0.82rem;"><span>Contact</span></a></li>
-      </ul>
-
-      <!-- Hamburger Menu Trigger (Mobile layout only) -->
-      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-    </div>
-  </nav>
-
-  <main>
-    <!-- 
-      ===========================================================================
-      HERO SECTION
-      ===========================================================================
-      Grid layout separating personal descriptions and live statistic counts from 
-      the glowing 3D-tilt avatar representation.
-    -->
-    <section id="hero">
-      <div class="container">
-        <div class="hero-content">
-          <!-- Text and Action Column -->
-          <div class="hero-text">
-            <!-- Opportunity Status Badge -->
-            <div class="hero-status-badge"><span class="hero-status-dot"></span> Open to Opportunities &amp;
-              Collaborations</div>
-            <p class="hero-greeting">Welcome, my name is</p>
-
-            <!-- Main Title (data-text drives nameShimmer transition in CSS) -->
-            <h1 class="hero-name" data-text="Fady Fawzy">Fady Fawzy</h1>
-
-            <!-- Typewriter effect updates contents here dynamically -->
-            <p class="hero-title">Computer Engineering Student</p>
-
-            <p class="hero-description">
-              Computer Engineering student at Cairo University with strong interests in computer networks, embedded
-              systems, web development, and artificial intelligence. Passionate about hands-on engineering projects,
-              low-level programming, and solving real-world technical problems.
-            </p>
-
-            <!-- Live Numeric Stats Grid (data-count triggers IntersectionObserver counting transition) -->
-            <div class="hero-stats">
-              <div class="stat-item reveal reveal-delay-1">
-                <div class="stat-number" data-count="3.94">0</div>
-                <div class="stat-label">GPA</div>
-              </div>
-              <div class="stat-item reveal reveal-delay-2">
-                <div class="stat-number">3rd</div>
-                <div class="stat-label">Rank</div>
-              </div>
-              <div class="stat-item reveal reveal-delay-3">
-                <div class="stat-number" data-count="6">0</div>
-                <div class="stat-label">Projects</div>
-              </div>
-            </div>
-
-            <!-- Call To Action Actions -->
-            <div class="hero-cta">
-              <a href="#projects" class="btn-primary-custom" aria-label="View my projects"><span>View Projects</span>
-                <span>→</span></a>
-              <a href="Fady_Fawzy_CV_2026.pdf" target="_blank" class="btn-outline-custom" download
-                aria-label="Download my CV as PDF">Download CV</a>
-            </div>
-          </div>
-
-          <!-- Interactive Visual Avatar Column -->
-          <div class="hero-visual">
-            <div class="hero-avatar-wrapper">
-              <!-- Glow pulse rings spinning in opposite directions -->
-              <div class="hero-avatar-ring"></div>
-              <div class="hero-avatar"><img src="avatar.jpg" alt="Fady Fawzy Avatar"></div>
-
-              <!-- Floating Badge 1 (GPA) -->
-              <div class="hero-floating-badge badge-gpa">
-                <span class="badge-icon"><i data-feather="target" style="width:16px;height:16px;"></i></span>
-                <div>
-                  <span class="badge-value" data-count="3.94">0</span>
-                  <span style="font-size: 0.7rem; color: var(--text-muted); display: block;">GPA</span>
-                </div>
-              </div>
-
-              <!-- Floating Badge 2 (Rank) -->
-              <div class="hero-floating-badge badge-rank">
-                <span class="badge-icon"><i data-feather="award" style="width:16px;height:16px;"></i></span>
-                <div>
-                  <span class="badge-value">3rd</span>
-                  <span style="font-size: 0.7rem; color: var(--text-muted); display: block;">Rank</span>
-                </div>
-              </div>
-            </div>
-          </div>
+<body class="portfolio">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="navbar" id="navbar"><div class="container nav-inner">
+    <a class="nav-logo" href="#hero" aria-label="Fady Fawzy home"><span class="monogram" aria-hidden="true">ff<span>.</span></span><span class="brand-note">Fady’s workbench</span></a>
+    <nav id="navLinks" class="nav-links" aria-label="Main navigation"><a href="#projects">Projects</a><a href="#about">About</a><a href="#education">Education</a><a href="#experience">Experience</a><a href="#skills">Skills</a><a href="#credentials">Credentials</a><a href="#contact">Contact ↗</a></nav>
+    <div class="nav-tools"><button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false"><span aria-hidden="true">◐</span></button><button id="navToggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="navLinks">Menu <span aria-hidden="true">+</span></button></div>
+  </div></header>
+  <main id="main">
+    <section id="hero" class="hero container" aria-labelledby="heroHeading">
+      <div class="hero-topline"><p class="eyebrow">Computer Engineering · Cairo University</p><p class="utility">Giza, Egypt <span aria-hidden="true">↗</span> Class of 2029</p></div>
+      <div class="hero-nameplate"><h1 id="heroHeading">Fady <span class="name-last">Fawzy<span class="name-period">.</span></span></h1><div class="nameplate-note"><span class="handwritten">Hi, I’m Fady.</span><svg viewBox="0 0 80 60" aria-hidden="true"><path d="M64 5C76 45 24 56 6 31m0 0 1 17m-1-17 18 3"/></svg></div></div>
+      <div class="hero-layout"><div class="hero-copy">
+        <p class="hero-role"><span class="role-prefix">Learning. Building. Iterating.</span>Aspiring Machine Learning Engineer</p>
+        <p class="hero-thesis">From messy data<br>to <em>working models.</em></p>
+        <p class="hero-description">Computer Engineering student building reproducible ML pipelines and prediction APIs with Python, Scikit-learn, and FastAPI.</p>
+        <div class="hero-actions"><a class="button button-primary" href="#projects">Explore my work <span aria-hidden="true">↘</span></a><a class="text-link" href="Fady_Fawzy_CV_2026.pdf" download>Download CV <span aria-hidden="true">↓</span></a></div>
+      </div><figure id="signalStudy" class="signal-study" data-view="model" aria-labelledby="signalTitle">
+        <div class="signal-top"><p class="utility" id="signalTitle">A thought, in three views.</p><div id="signalControls" class="signal-controls" role="group" aria-label="Explore data, model, and API" hidden><button type="button" data-lens="data" aria-pressed="false" aria-controls="signalExplanation">Data</button><button type="button" data-lens="model" aria-pressed="true" aria-controls="signalExplanation">Model</button><button type="button" data-lens="api" aria-pressed="false" aria-controls="signalExplanation">API</button></div></div>
+        <div class="signal-stage"><svg class="signal-plot" viewBox="0 0 540 300" aria-hidden="true"><g class="plot-grid"><path d="M54 32V256H493M54 88H493M54 144H493M54 200H493M142 32V256M230 32V256M318 32V256M406 32V256"/></g><g class="signal-points"><circle class="signal-point point-a" cx="85" cy="46" r="5"/><circle class="signal-point point-a" cx="158" cy="100" r="5"/><path class="signal-point point-b" d="M227 164l8 8m0-8l-8 8"/><path class="signal-point point-b" d="M300 58l8 8m0-8l-8 8"/><path class="signal-point point-b" d="M373 154l8 8m0-8l-8 8"/><path class="signal-point point-b" d="M446 76l8 8m0-8l-8 8"/><circle class="signal-point point-a" cx="125" cy="204" r="5"/><circle class="signal-point point-a" cx="198" cy="154" r="5"/><path class="signal-point point-b" d="M267 114l8 8m0-8l-8 8"/><path class="signal-point point-b" d="M340 92l8 8m0-8l-8 8"/><path class="signal-point point-b" d="M413 84l8 8m0-8l-8 8"/><circle class="signal-point point-a" cx="92" cy="94" r="5"/><circle class="signal-point point-a" cx="165" cy="114" r="5"/><path class="signal-point point-b" d="M234 144l8 8m0-8l-8 8"/><path class="signal-point point-b" d="M307 192l8 8m0-8l-8 8"/><path class="signal-point point-b" d="M380 66l8 8m0-8l-8 8"/><path class="signal-point point-b" d="M453 142l8 8m0-8l-8 8"/><circle class="signal-point point-a" cx="132" cy="48" r="5"/><circle class="signal-point point-a" cx="205" cy="152" r="5"/><path class="signal-point point-b" d="M274 78l8 8m0-8l-8 8"/><path class="signal-point point-b" d="M347 210l8 8m0-8l-8 8"/><path class="signal-point point-b" d="M420 168l8 8m0-8l-8 8"/><circle class="signal-point point-a" cx="99" cy="144" r="5"/><circle class="signal-point point-a" cx="172" cy="130" r="5"/><path class="signal-point point-b" d="M241 126l8 8m0-8l-8 8"/><path class="signal-point point-b" d="M314 140l8 8m0-8l-8 8"/><path class="signal-point point-b" d="M387 168l8 8m0-8l-8 8"/><circle class="signal-point point-a" cx="66" cy="214" r="5"/><circle class="signal-point point-a" cx="139" cy="82" r="5"/><circle class="signal-point point-a" cx="212" cy="152" r="5"/><circle class="signal-point point-a" cx="285" cy="48" r="5"/><path class="signal-point point-b" d="M354 142l8 8m0-8l-8 8"/><path class="signal-point point-b" d="M427 66l8 8m0-8l-8 8"/><circle class="signal-point point-a" cx="106" cy="196" r="5"/><circle class="signal-point point-a" cx="179" cy="148" r="5"/><path class="signal-point point-b" d="M248 110l8 8m0-8l-8 8"/></g><g class="model-boundary"><path class="boundary-wash" d="M54 32H370C300 76 340 125 246 157S253 216 196 256H54Z"/><path class="boundary-line" d="M370 32C300 76 340 125 246 157S253 216 196 256"/><ellipse cx="246" cy="157" rx="32" ry="21" transform="rotate(-28 246 157)"/></g><g class="plot-labels"><text x="54" y="282">feature space</text><text x="386" y="282">○ / × outcomes</text></g></svg>
+          <div class="signal-api"><div class="api-profile"><span class="utility">INPUT</span><strong>Customer<br>profile</strong><span class="api-lines" aria-hidden="true"></span></div><span class="api-connector" aria-hidden="true">→</span><div class="api-model"><svg viewBox="0 0 80 80" aria-hidden="true"><path d="M14 18 40 9 66 18 40 31Zm0 0v39l26 16 26-16V18M40 31v42M14 38l26 15 26-15"/></svg><strong>Fitted pipeline</strong><span class="utility">preprocess + predict</span></div><span class="api-connector" aria-hidden="true">→</span><div class="api-output"><span class="utility">OUTPUT</span><strong>Prediction<br>& risk score</strong><span class="api-result" aria-hidden="true">↗</span></div></div>
+          <p class="signal-scribble handwritten">find the signal.</p>
         </div>
-
-        <!-- Mouse Wheel Scroll Down Reminder -->
-        <div class="scroll-indicator">
-          <div class="mouse"></div>
-          <p>Scroll Down</p>
-        </div>
-      </div>
+        <figcaption class="signal-legend"><p id="signalCaption" class="signal-caption utility">Concept sketch · illustrative data, not model results</p>
+        <div class="signal-foot"><p id="signalExplanation" aria-live="polite">A boundary is a hypothesis. Compare models on validation data before trusting the result.</p><a id="signalInspect" href="#project-churn"><span>Explore model evaluation</span><span aria-hidden="true">↗</span></a></div>
+        </figcaption>
+      </figure></div>
+      <div class="hero-bottom"><p><span class="status-dot" aria-hidden="true"></span> ML engineering in progress · ATR internship completed</p><a href="#projects">Selected work below <span aria-hidden="true">↓</span></a></div>
     </section>
-
-    <!-- 
-      ===========================================================================
-      ABOUT SECTION
-      ===========================================================================
-      Uses pseudo-elements Content '01', '02', '03' to establish clear layout priorities.
-    -->
-    <section id="about">
-      <div class="container">
-        <!-- Unified Section Headers -->
-        <div class="section-header reveal">
-          <p class="section-label">About Me</p>
-          <h2 class="section-title">Professional <span class="gradient-text">Profile</span></h2>
-        </div>
-
-        <!-- Three semantic narrative paragraphs -->
-        <div class="about-content reveal">
-          <p class="about-intro">
-            I'm <span class="highlight">Fady Fawzy Youssef</span>, a Computer Engineering student from Giza, Egypt,
-            deeply passionate about programming and technology. I believe in learning with deep understanding rather
-            than memorization, tackling every challenge with an analytical and patient mindset.
-          </p>
-
-          <p class="about-journey">
-            My journey began with CS50, and I've been driven by hands-on engineering projects, low-level programming,
-            and solving real-world technical problems through practical experience and teamwork. Ranked <span
-              class="highlight">3rd</span> in my preparatory year with a GPA of <span class="highlight">3.94</span>, I'm
-            constantly pushing myself to grow as an engineer.
-          </p>
-
-          <p class="about-interests">
-            My interests span across <span class="highlight">embedded systems, computer networks, web development, and
-              AI</span> — each offering unique challenges that fuel my curiosity. Beyond coding, I love exploring new
-            places and trying different cuisines, especially those grilled by my mother.
-          </p>
-        </div>
-
-        <!-- Quick Informative Card Matrix -->
-        <div class="about-cards-wrapper">
-          <div class="about-info-cards">
-            <div class="info-card reveal reveal-delay-1">
-              <div class="info-icon"><i data-feather="book-open"></i></div>
-              <div class="info-content">
-                <div class="info-label">University</div>
-                <div class="info-value">Cairo University — Faculty of Engineering</div>
-              </div>
-            </div>
-            <div class="info-card reveal reveal-delay-2">
-              <div class="info-icon"><i data-feather="monitor"></i></div>
-              <div class="info-content">
-                <div class="info-label">Department</div>
-                <div class="info-value">Computer Engineering</div>
-              </div>
-            </div>
-            <div class="info-card reveal reveal-delay-3">
-              <div class="info-icon"><i data-feather="map-pin"></i></div>
-              <div class="info-content">
-                <div class="info-label">Location</div>
-                <div class="info-value">Giza, Egypt</div>
-              </div>
-            </div>
-            <div class="info-card reveal reveal-delay-4">
-              <div class="info-icon"><i data-feather="star"></i></div>
-              <div class="info-content">
-                <div class="info-label">Interests</div>
-                <div class="info-value">Networks, Embedded Systems, AI, Web Dev</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <section class="evidence-desk container" aria-labelledby="traceHeading"><div class="evidence-margin"><p class="eyebrow">Behind the toolkit</p><p class="handwritten">Don’t just take<br>my word for it.</p></div><div class="tool-tracer" aria-labelledby="traceHeading"><h2 id="traceHeading">Trace a tool.</h2><div id="evidenceControls" class="evidence-controls" role="group" aria-label="Choose a tool to trace"></div><div id="evidenceTrail" class="evidence-trail"><p class="trail-summary">Python: From first programs to a prediction API.</p><ol class="trail-links"><li><a class="trail-evidence-link" href="#credential-python"><span class="trail-kind">Learning</span>Getting started with Python</a><p class="trail-detail">Programming foundations</p></li><li><a class="trail-evidence-link" href="#credential-fcc"><span class="trail-kind">Learning</span>Data Analysis with Python</a><p class="trail-detail">Data analysis practice</p></li><li><a class="trail-evidence-link" href="#ml-internship"><span class="trail-kind">Fieldwork</span>AI &amp; Machine Learning Intern</a><p class="trail-detail">Commercial datasets and reproducible ML</p></li><li><a class="trail-evidence-link" href="#project-churn"><span class="trail-kind">Build</span>Customer Churn Prediction System</a><p class="trail-detail">Classification pipeline + FastAPI inference</p></li></ol></div><p id="evidenceStatus" class="trace-status utility" role="status" aria-live="polite"></p></div>
+        </section>
+    <section id="projects" class="projects-section" aria-labelledby="projectsHeading"><div class="container">
+      <div class="section-heading"><div><p class="eyebrow">Selected work / machine learning & engineering</p><h2 id="projectsHeading">Built to understand.<br><span class="heading-soft">Built to work.</span></h2></div><p class="section-aside">Models, machines, and the logic between them.<br>A selection of things I’ve made.</p></div>
+      <div class="project-toolbar"><div class="project-filters" role="group" aria-label="Filter projects"><button class="filter-btn active" data-filter="all" aria-pressed="true">All work</button><button class="filter-btn" data-filter="ai" aria-pressed="false">AI & data</button><button class="filter-btn" data-filter="embedded" aria-pressed="false">Embedded</button><button class="filter-btn" data-filter="software" aria-pressed="false">Software</button><button class="filter-btn" data-filter="design" aria-pressed="false">Design & research</button></div><p id="projectCount" class="utility" role="status">7 projects</p></div>
+      <div id="projectList" class="project-list">
+<article id="project-churn" class="fallback-project" data-project="churn" data-category="ai"><p class="project-kicker">ai / 2026</p><h3>Customer Churn Prediction System</h3><p>From commercial data to a usable prediction service. A production-oriented classification pipeline with one preprocessing path for training, single-customer prediction, and batch CSV inference.</p><p class="project-tools">Python / Pandas / Scikit-learn / FastAPI</p><a href="https://github.com/Fady-Fawzy/Customer-Churn-Prediction-System" target="_blank" rel="noopener noreferrer">View source ↗</a></article>
+<article id="project-nurse" class="fallback-project" data-project="nurse" data-category="embedded"><p class="project-kicker">embedded / 2026</p><h3>Smart Nurse Robot</h3><p>A medical assistant built on STM32 in pure bare-metal ARM Thumb-2 Assembly. Every peripheral driver starts at the register level, without HAL or vendor libraries.</p><p class="project-tools">STM32 / ARM Thumb-2 / Bare-metal</p><a href="https://github.com/Fady-Fawzy/Nurse-Robot-" target="_blank" rel="noopener noreferrer">View source ↗</a></article>
+<article id="project-flowchart" class="fallback-project" data-project="flowchart" data-category="software"><p class="project-kicker">software / 2025</p><h3>Flowchart Designer &amp; Simulator</h3><p>Draw an algorithm, validate its logic, run it, then generate C++. A modern C++ desktop application with modular connectors and an undo/redo history.</p><p class="project-tools">C++ / Simulation / Code generation</p><a href="https://github.com/MrF0gg/PT-Project" target="_blank" rel="noopener noreferrer">View source ↗</a></article>
+<article id="project-restaurant" class="fallback-project" data-project="restaurant" data-category="software"><p class="project-kicker">software / 2026</p><h3>Restaurant Management System</h3><p>An event-driven C++ simulation of a restaurant in motion. Custom data structures and scheduling algorithms assign dine-in, takeaway, and delivery orders to the right resources.</p><p class="project-tools">C++ / Data structures / Scheduling</p><a href="https://github.com/FadyAshraf00/Restaurant-management-system" target="_blank" rel="noopener noreferrer">View source ↗</a></article>
+<article id="project-alu" class="fallback-project" data-project="alu" data-category="embedded"><p class="project-kicker">embedded / 2025</p><h3>FPGA 2-Phase ALU Logic Design</h3><p>A Verilog HDL arithmetic and logic unit on the DE1-SoC FPGA. Arithmetic, logic, BCD-to-Excess-3 conversion, and registered outputs, verified in ModelSim.</p><p class="project-tools">Verilog HDL / DE1-SoC / ModelSim</p></article>
+<article id="project-lampshade" class="fallback-project" data-project="lampshade" data-category="design"><p class="project-kicker">design / 2026</p><h3>Sustainable Innovative Lampshade</h3><p>Recycled PVC, a useful object, and a lesson in leading a team. Our circular-economy design earned 3rd place and became a permanent department showcase model.</p><p class="project-tools">Recycled PVC / Team leadership / Sustainable design</p><a href="https://drive.google.com/drive/folders/101Fc_amTn_u18cCD_XIGu91pwlinP-0Y" target="_blank" rel="noopener noreferrer">View project media ↗</a></article>
+<article id="project-sdg" class="fallback-project" data-project="sdg" data-category="design"><p class="project-kicker">design / 2025</p><h3>SDG 9 Research &amp; Keynote Presentation</h3><p>Research into industry, innovation, and sustainable infrastructure. Led the team, prepared the presentation, and delivered the keynote.</p><p class="project-tools">Research / Public speaking / SDG 9</p></article>
+</div><p id="projectEmpty" class="empty-state" hidden>No projects in this category yet. Try All work.</p>
+    </div></section>
+    <section id="about" class="about-section container" aria-labelledby="aboutHeading">
+      <div class="about-margin"><p class="eyebrow">About / the person</p><figure class="about-portrait"><img src="avatar.jpg" width="400" height="400" loading="lazy" alt="Fady Fawzy smiling outdoors"><figcaption class="handwritten">Still asking “why?”</figcaption></figure><svg viewBox="0 0 100 70" class="note-arrow" aria-hidden="true"><path d="M5 5Q70 0 75 50M55 37l20 14 12-21" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+      <div class="about-body"><h2 id="aboutHeading">Understanding first.<br>Building right after.</h2><p class="about-lead">I’m Fady Fawzy Youssef, a Computer Engineering student at Cairo University. I’m working toward becoming a Machine Learning Engineer: understanding the data, evaluating the model, and building a useful system around it.</p><p>I started with CS50. Assembly and C++ taught me to look beneath the abstraction. Today I bring that curiosity to machine learning: preprocessing without leakage, comparing models, and carrying the same pipeline into inference.</p><p class="personal-note">Away from the keyboard: new places, different cuisines, and my mother’s grilled food.</p><dl class="about-facts"><div><dt>Based in</dt><dd>Giza, Egypt</dd></div><div><dt>Languages</dt><dd>Arabic · English</dd></div><div><dt>Exploring</dt><dd>Machine learning engineering,<br>prediction APIs & reproducible pipelines</dd></div></dl></div>
     </section>
-
-    <!-- 
-      ===========================================================================
-      EDUCATION SECTION
-      ===========================================================================
-    -->
-    <section id="education">
-      <div class="container">
-        <div class="section-header reveal">
-          <p class="section-label">Education</p>
-          <h2 class="section-title">Academic <span class="gradient-text">Journey</span></h2>
-        </div>
-
-        <div class="education-card reveal">
-          <div class="education-icon-wrap"><i data-feather="book" style="width:32px;height:32px;"></i></div>
-          <div class="education-info">
-            <h3>Cairo University, Faculty of Engineering</h3>
-            <p class="edu-dept">Computer Engineering</p>
-            <div class="edu-meta">
-              <span><i data-feather="calendar"
-                  style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom;"></i>2025 – 2029</span>
-              <span><i data-feather="map-pin"
-                  style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom;"></i>Giza, Egypt</span>
-            </div>
-            <div class="edu-badge"><i data-feather="award"
-                style="width:16px;height:16px;margin-right:8px;vertical-align:text-bottom;"></i> Ranked 3rd — GPA 3.94
-            </div>
-            <p style="margin-top: 12px; font-size: 0.9rem; color: var(--text-secondary);">
-              Excelled academically, earning 97.2% in Egypt's National High School Diploma. Ranked 200th nationwide and
-              admitted to Cairo University. Placed among the top three students, enabling transfer to the Computer
-              Engineering department.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 
-      ===========================================================================
-      SKILLS SECTION
-      ===========================================================================
-      Skills split in three distinct categories.
-      CSS cascade selector :has() applies highlight adjustments to neighboring tags on hover.
-    -->
-    <section id="skills">
-      <div class="container">
-        <div class="section-header reveal">
-          <p class="section-label">Skills</p>
-          <h2 class="section-title">Technical <span class="gradient-text">Skills</span></h2>
-        </div>
-        <div class="skills-grid">
-          <!-- Programming Languages -->
-          <div class="skill-category reveal reveal-delay-1">
-            <div class="skill-category-icon"><i data-feather="code"></i></div>
-            <h3 class="skill-category-title">Programming Languages</h3>
-            <div class="skill-tags">
-              <span class="skill-tag">C</span>
-              <span class="skill-tag">C++</span>
-              <span class="skill-tag">Python</span>
-              <span class="skill-tag">JavaScript</span>
-              <span class="skill-tag">HTML</span>
-              <span class="skill-tag">CSS</span>
-              <span class="skill-tag">SQL</span>
-              <span class="skill-tag">Verilog</span>
-              <span class="skill-tag">ARM Assembly</span>
-            </div>
-          </div>
-
-          <!-- Tools & Platforms -->
-          <div class="skill-category reveal reveal-delay-2">
-            <div class="skill-category-icon"><i data-feather="tool"></i></div>
-            <h3 class="skill-category-title">Tools & Platforms</h3>
-            <div class="skill-tags">
-              <span class="skill-tag">VS Code</span>
-              <span class="skill-tag">Git</span>
-              <span class="skill-tag">GitHub</span>
-              <span class="skill-tag">Keil µVision</span>
-              <span class="skill-tag">ModelSim</span>
-              <span class="skill-tag">AutoCAD</span>
-              <span class="skill-tag">Power BI</span>
-            </div>
-          </div>
-
-          <!-- Soft Skills & Languages -->
-          <div class="skill-category reveal reveal-delay-3">
-            <div class="skill-category-icon"><i data-feather="users"></i></div>
-            <h3 class="skill-category-title">Soft Skills & Languages</h3>
-            <div class="skill-tags">
-              <span class="skill-tag">Leadership</span>
-              <span class="skill-tag">Adaptability</span>
-              <span class="skill-tag">Teamwork</span>
-              <span class="skill-tag">Communication</span>
-              <span class="skill-tag">Problem Solving</span>
-              <span class="skill-tag">Arabic (Native)</span>
-              <span class="skill-tag">English (Very Good)</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 
-      ===========================================================================
-      EXPERIENCE TIMELINE SECTION
-      ===========================================================================
-      Timeline path mapped vertically. Dot pulse triggers infinite scale breathing.
-    -->
-    <section id="experience">
-      <div class="container">
-        <div class="section-header reveal">
-          <p class="section-label">Experience</p>
-          <h2 class="section-title">Professional <span class="gradient-text">Experience</span></h2>
-        </div>
-        <div class="timeline">
-
-          <!-- Power BI Trainee -->
-          <div class="timeline-item reveal">
-            <div class="timeline-dot"></div>
-            <div class="timeline-card">
-              <div class="timeline-header">
-                <div>
-                  <h3 class="timeline-role">Power BI Trainee</h3>
-                  <p class="timeline-company">Digital Egypt Pioneers Initiative</p>
-                </div>
-                <div class="timeline-meta">
-                  <span class="timeline-date"><i data-feather="calendar"
-                      style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom;"></i>2025 –
-                    Present</span>
-                </div>
-              </div>
-              <ul class="timeline-details">
-                <li>Learning data analysis and visualization using Power BI</li>
-                <li>Working with dashboards, reports, and data-driven insights</li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- HR Member -->
-          <div class="timeline-item reveal">
-            <div class="timeline-dot"></div>
-            <div class="timeline-card">
-              <div class="timeline-header">
-                <div>
-                  <h3 class="timeline-role">HR Member</h3>
-                  <p class="timeline-company">IEEE CUSB</p>
-                </div>
-                <div class="timeline-meta">
-                  <span class="timeline-date"><i data-feather="calendar"
-                      style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom;"></i>2025 –
-                    Present</span>
-                  <span class="timeline-location"><i data-feather="map-pin"
-                      style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom;"></i>Giza, Egypt</span>
-                </div>
-              </div>
-              <ul class="timeline-details">
-                <li>Assisted in organizing team activities and supporting member coordination</li>
-                <li>Participated in HR operations, communication, and event preparation</li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- Research Participant -->
-          <div class="timeline-item reveal">
-            <div class="timeline-dot"></div>
-            <div class="timeline-card">
-              <div class="timeline-header">
-                <div>
-                  <h3 class="timeline-role">Research Participant</h3>
-                  <p class="timeline-company">TCCD Research Day — 15th Edition</p>
-                </div>
-                <div class="timeline-meta">
-                  <span class="timeline-date"><i data-feather="calendar"
-                      style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom;"></i>2026</span>
-                  <span class="timeline-location"><i data-feather="map-pin"
-                      style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom;"></i>Egypt</span>
-                </div>
-              </div>
-              <ul class="timeline-details">
-                <li>Achieved 4th place in the Computer Department</li>
-                <li>Presented research on Adaptive Low-Rank Memory Compression Framework for Operating Systems</li>
-                <li>Focused on improving memory efficiency through adaptive low-rank compression techniques</li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- Electrical Intern -->
-          <div class="timeline-item reveal">
-            <div class="timeline-dot"></div>
-            <div class="timeline-card">
-              <div class="timeline-header">
-                <div>
-                  <h3 class="timeline-role">Electrical & Technical Intern</h3>
-                  <p class="timeline-company">EVA Pharma</p>
-                </div>
-                <div class="timeline-meta">
-                  <span class="timeline-date"><i data-feather="calendar"
-                      style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom;"></i>Jun 2025 – Oct
-                    2025</span>
-                  <span class="timeline-location"><i data-feather="map-pin"
-                      style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom;"></i>Giza, Egypt</span>
-                </div>
-              </div>
-              <ul class="timeline-details">
-                <li>Assisted engineers and technicians in electrical systems and industrial operations</li>
-                <li>Worked with backup generators, server/data panels, and electrical management tasks</li>
-                <li>Supported AutoCAD work, technical documentation, and professional email communication</li>
-                <li>Applied engineering knowledge in a real industrial environment and handled increasing
-                  responsibilities</li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- Production Line Operator -->
-          <div class="timeline-item reveal">
-            <div class="timeline-dot"></div>
-            <div class="timeline-card">
-              <div class="timeline-header">
-                <div>
-                  <h3 class="timeline-role">Production Line Operator</h3>
-                  <p class="timeline-company">EVA Pharma</p>
-                </div>
-                <div class="timeline-meta">
-                  <span class="timeline-date"><i data-feather="calendar"
-                      style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom;"></i>Summer
-                    Training</span>
-                  <span class="timeline-location"><i data-feather="map-pin"
-                      style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom;"></i>Giza, Egypt</span>
-                </div>
-              </div>
-              <ul class="timeline-details">
-                <li>Operated industrial machines independently during summer training</li>
-                <li>Gained practical experience with production systems and teamwork in industrial environments</li>
-                <li>Improved communication and problem-solving skills through collaboration with technicians and
-                  supervisors</li>
-              </ul>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- 
-      ===========================================================================
-      PROJECTS SECTION (PORTFOLIO GRID)
-      ===========================================================================
-      Filter actions scan 'data-filter' parameters.
-      Cards match categories using the 'data-category' selector attribute.
-      '.card-light' behaves as target for mousemove reflection offsets.
-    -->
-    <section id="projects">
-      <div class="container">
-        <div class="section-header reveal">
-          <p class="section-label">Projects</p>
-          <h2 class="section-title">Featured <span class="gradient-text">Work</span></h2>
-        </div>
-
-        <!-- Dynamic Filter Controls -->
-        <div class="project-filters reveal">
-          <button class="filter-btn active" data-filter="all" aria-pressed="true">All</button>
-          <button class="filter-btn" data-filter="embedded" aria-pressed="false">Embedded/Hardware</button>
-          <button class="filter-btn" data-filter="software" aria-pressed="false">Software/C++</button>
-          <button class="filter-btn" data-filter="design" aria-pressed="false">Design/Research</button>
-        </div>
-
-        <!-- Project Cards Grid Layout -->
-        <div class="projects-grid">
-
-          <!-- Smart Nurse Robot -->
-          <div class="project-card reveal reveal-delay-1" data-category="embedded">
-            <div class="card-light"></div>
-            <div class="project-header">
-              <span class="project-icon"><i data-feather="cpu"></i></span>
-              <span class="project-year">2026</span>
-            </div>
-            <h3 class="project-title">Smart Nurse Robot</h3>
-            <p class="project-desc">
-              Fully autonomous medical assistant robot using bare-metal ARM Thumb-2 Assembly on STM32 without HAL
-              libraries. Integrated I2C, SPI, UART, ADC, PWM, Bluetooth, RFID, and ultrasonic navigation. Real-time
-              monitoring of Heart Rate, SpO2, IV drop-rate, and pressure sensing with a custom TFT dashboard.
-            </p>
-            <div class="project-tags">
-              <span class="project-tag">ARM Assembly</span>
-              <span class="project-tag">STM32</span>
-              <span class="project-tag">I2C / SPI</span>
-              <span class="project-tag">Bluetooth</span>
-              <span class="project-tag">RFID</span>
-            </div>
-            <div class="project-links">
-              <a href="https://github.com/fady111-f" target="_blank">View Repository →</a>
-            </div>
-          </div>
-
-          <!-- Flowchart Designer -->
-          <div class="project-card reveal reveal-delay-2" data-category="software">
-            <div class="card-light"></div>
-            <div class="project-header">
-              <span class="project-icon"><i data-feather="pen-tool"></i></span>
-              <span class="project-year">2025</span>
-            </div>
-            <h3 class="project-title">Flowchart Designer & Simulator</h3>
-            <p class="project-desc">
-              Complete flowchart designer and simulator in C++ without UI frameworks. Implemented copy/paste, undo/redo,
-              validation, and automated C++ code generation features for visual algorithm design.
-            </p>
-            <div class="project-tags">
-              <span class="project-tag">C++</span>
-              <span class="project-tag">Graphics</span>
-              <span class="project-tag">Code Gen</span>
-            </div>
-            <div class="project-links">
-              <a href="https://github.com/fady111-f" target="_blank">View Repository →</a>
-            </div>
-          </div>
-
-          <!-- Restaurant Management -->
-          <div class="project-card reveal reveal-delay-3" data-category="software">
-            <div class="card-light"></div>
-            <div class="project-header">
-              <span class="project-icon"><i data-feather="coffee"></i></span>
-              <span class="project-year">2026</span>
-            </div>
-            <h3 class="project-title">Restaurant Management System</h3>
-            <p class="project-desc">
-              Restaurant order management simulation system for dine-in, takeaway, and delivery orders. Features dynamic
-              assignment algorithms for chefs, tables, and delivery scooters.
-            </p>
-            <div class="project-tags">
-              <span class="project-tag">C++</span>
-              <span class="project-tag">Algorithms</span>
-              <span class="project-tag">Simulation</span>
-            </div>
-            <div class="project-links">
-              <a href="https://github.com/fady111-f" target="_blank">View Repository →</a>
-            </div>
-          </div>
-
-          <!-- FPGA ALU -->
-          <div class="project-card reveal reveal-delay-1" data-category="embedded">
-            <div class="card-light"></div>
-            <div class="project-header">
-              <span class="project-icon"><i data-feather="zap"></i></span>
-              <span class="project-year">2025</span>
-            </div>
-            <h3 class="project-title">FPGA ALU Logic Design</h3>
-            <p class="project-desc">
-              Designed and implemented an Arithmetic Logic Unit (ALU) using Verilog. Supported arithmetic operations,
-              BCD-to-excess-3 conversion, and FPGA-based sequential logic. Simulated and verified on a DE1-SoC FPGA
-              board using ModelSim.
-            </p>
-            <div class="project-tags">
-              <span class="project-tag">Verilog</span>
-              <span class="project-tag">FPGA</span>
-              <span class="project-tag">DE1-SoC</span>
-              <span class="project-tag">ModelSim</span>
-            </div>
-          </div>
-
-          <!-- Innovative Lampshade Project -->
-          <div class="project-card reveal reveal-delay-2" data-category="design">
-            <div class="card-light"></div>
-            <div class="project-header">
-              <span class="project-icon"><i data-feather="sun"></i></span>
-              <span class="project-year">2026</span>
-            </div>
-            <h3 class="project-title">Innovative Lampshade Project</h3>
-            <p class="project-desc">
-              Led a team in designing and building a recyclable PVC-based decorative lampshade. Applied sustainable
-              design principles using reused materials. Received 3rd place and was selected as a showcase model by the
-              department head.
-            </p>
-            <div class="project-tags">
-              <span class="project-tag">Design</span>
-              <span class="project-tag">Sustainability</span>
-              <span class="project-tag">Leadership</span>
-            </div>
-          </div>
-
-          <!-- SDG 9 — Industry & Innovation -->
-          <div class="project-card reveal reveal-delay-3" data-category="design">
-            <div class="card-light"></div>
-            <div class="project-header">
-              <span class="project-icon"><i data-feather="globe"></i></span>
-              <span class="project-year">2025</span>
-            </div>
-            <h3 class="project-title">SDG 9 — Industry & Innovation</h3>
-            <p class="project-desc">
-              Led a team to research and present Sustainable Development Goal 9. Prepared presentation materials and
-              coordinated public speaking tasks. Received excellent feedback for presentation quality and teamwork.
-            </p>
-            <div class="project-tags">
-              <span class="project-tag">Research</span>
-              <span class="project-tag">Presentation</span>
-              <span class="project-tag">SDG</span>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- 
-      ===========================================================================
-      CONTACT SECTION
-      ===========================================================================
-      Split into quick link channels and a direct email Formspree connection block.
-      'data-copy' attribute on email/phone lets user copy details instantly on click.
-    -->
-    <section id="contact">
-      <div class="container">
-        <div class="section-header reveal">
-          <p class="section-label">Contact</p>
-          <h2 class="section-title">Let's <span class="gradient-text">Connect</span></h2>
-        </div>
-        <div class="contact-wrapper">
-          <!-- Information and Channels Grid -->
-          <div>
-            <p class="contact-info-text reveal">
-              I'm always open to new opportunities, collaborations, and interesting conversations. Whether you have a
-              project in mind, a question, or just want to say hello — feel free to reach out!
-            </p>
-            <div class="contact-links">
-              <!-- Email Copy Link -->
-              <a href="mailto:fady.fawzy2006@gmail.com" class="contact-link reveal reveal-delay-1"
-                data-copy="fady.fawzy2006@gmail.com">
-                <div class="contact-link-icon"><i data-feather="mail"></i></div>
-                <div>
-                  <div class="contact-link-label">Email</div>
-                  <div class="contact-link-value">fady.fawzy2006@gmail.com</div>
-                </div>
-              </a>
-
-              <!-- Phone Copy Link -->
-              <a href="tel:+201204788242" class="contact-link reveal reveal-delay-2" data-copy="+201204788242">
-                <div class="contact-link-icon"><i data-feather="phone"></i></div>
-                <div>
-                  <div class="contact-link-label">Phone</div>
-                  <div class="contact-link-value">+20 120 478 8242</div>
-                </div>
-              </a>
-
-              <!-- LinkedIn Link -->
-              <a href="https://www.linkedin.com/in/fady-fawzy1/" target="_blank"
-                class="contact-link reveal reveal-delay-3">
-                <div class="contact-link-icon"><i data-feather="linkedin"></i></div>
-                <div>
-                  <div class="contact-link-label">LinkedIn</div>
-                  <div class="contact-link-value">fady-fawzy</div>
-                </div>
-              </a>
-
-              <!-- GitHub Link -->
-              <a href="https://github.com/fady111-f" target="_blank" class="contact-link reveal reveal-delay-4">
-                <div class="contact-link-icon"><i data-feather="github"></i></div>
-                <div>
-                  <div class="contact-link-label">GitHub</div>
-                  <div class="contact-link-value">fady111-f</div>
-                </div>
-              </a>
-            </div>
-          </div>
-
-          <!-- Direct Message Form Panel (Fires handleSubmit async Fetch sequence onsubmit) -->
-          <div class="contact-form reveal">
-            <h3>Send a Message</h3>
-            <form id="contactForm" action="https://formspree.io/f/xaqzoldn" method="POST"
-              onsubmit="handleSubmit(event)">
-              <div class="form-group">
-                <label for="name">Your Name</label>
-                <input type="text" id="name" name="name" placeholder="John Doe" required />
-              </div>
-              <div class="form-group">
-                <label for="email">Your Email</label>
-                <input type="email" id="email" name="email" placeholder="john@example.com" required />
-              </div>
-              <div class="form-group">
-                <label for="message">Message</label>
-                <textarea id="message" name="message" placeholder="Tell me about your project or idea..."
-                  required></textarea>
-              </div>
-              <button type="submit" class="btn-primary-custom" style="width: 100%; justify-content: center;">
-                <span>Send Message</span> <i data-feather="send" style="width:18px;height:18px;"></i>
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 
-    ===========================================================================
-    NEWSLETTER SECTION
-    ===========================================================================
-    A marketing card calling handleNewsletterSubmit on submit.
-  -->
-    <section id="newsletter">
-      <div class="container">
-        <div class="newsletter-wrapper reveal">
-          <div class="newsletter-content">
-            <h2>Stay Updated</h2>
-            <p>Subscribe to get notified about new projects, articles, and opportunities</p>
-          </div>
-          <form class="newsletter-form"
-            action="https://script.google.com/macros/s/AKfycbyHU0_LGDwVDpdkUOVRTt_GPvmiWHOLdn83sLBx7Is2_wI5iJopZCNmiEyMte1QlFTg/exec"
-            method="POST" onsubmit="handleNewsletterSubmit(event)">
-            <input type="email" name="email" id="newsletterEmail" placeholder="your@email.com" required
-              aria-label="Email address for newsletter" />
-            <button type="submit" class="btn-primary-custom">
-              <span>Subscribe</span>
-              <span>→</span>
-            </button>
-          </form>
-        </div>
-      </div>
-    </section>
+    <section id="education" class="education-section" aria-labelledby="educationHeading"><div class="container education-layout"><div><p class="eyebrow">Education / foundations</p><h2 id="educationHeading">Cairo University</h2><p>Faculty of Engineering<br>B.Sc. Computer Engineering</p><p class="utility education-date">2025 – 2029 · Expected graduation 2029</p></div><div class="academic-records"><div class="academic-record"><span class="record-label">Computer Engineering Department</span><div class="academic-pair"><strong data-academic="department.rank">1st</strong><span>rank</span><strong data-academic="department.gpa">3.88</strong><span>GPA</span></div></div><div class="academic-record prep-record"><span class="record-label">Preparatory Engineering Year</span><div class="academic-pair"><strong data-academic="preparatory.rank">3rd</strong><span>rank</span><strong data-academic="preparatory.gpa">3.94</strong><span>GPA</span></div></div><p class="record-footnote">Two stages of the same education. Two separate records.</p></div></div></section>
+    <section id="experience" class="experience-section container" aria-labelledby="experienceHeading"><div class="section-heading"><div><p class="eyebrow">Experience / field notes</p><h2 id="experienceHeading">Outside the classroom.</h2></div><p class="section-aside">Commercial data, industrial systems,<br>research, and working with people.</p></div><div id="experienceList" class="experience-list"><article id="ml-internship" class="experience-entry"><div class="experience-meta"><p class="experience-period">1 Sep – 1 Oct 2026 · Completed</p><p class="experience-location">Cairo, Egypt</p></div><div><h3>AI &amp; Machine Learning Intern</h3><p class="experience-company">ATR · Akhnaton Trading &amp; Distribution — EVA Group</p><ul><li>Worked with real commercial datasets in Python, Pandas, and Scikit-learn: EDA, missing-data handling, scaling, and categorical encoding.</li><li>Trained and evaluated Logistic Regression, Decision Trees, and Random Forests with GridSearchCV.</li><li>Structured modular, reproducible ML pipelines for API integration and batch inference.</li></ul><a class="experience-proof" href="#credential-atr">See the certificate ↗</a></div></article>
+<article id="depi-experience" class="experience-entry"><div class="experience-meta"><p class="experience-period">Nov 2025 – Jul 2026 · Completed</p><p class="experience-location">Egypt</p></div><div><h3>Microsoft Power BI Specialist</h3><p class="experience-company">Digital Egypt Pioneers Initiative (DEPI)</p><ul><li>Built interactive dashboards, data models, DAX metrics, and analytical reporting workflows.</li><li>Recognized for outstanding leadership and contributions as a DEPI Round 4 Team Leader.</li></ul><a class="experience-proof" href="#credential-depi-leader">See the certificate ↗</a></div></article>
+<article id="research-experience" class="experience-entry"><div class="experience-meta"><p class="experience-period">2026</p><p class="experience-location">Computer Department</p></div><div><h3>Research Participant · 4th Place</h3><p class="experience-company">TCCD Research Day — 15th Edition</p><ul><li>Co-authored and presented Adaptive Low-Rank Memory Compression Framework for Operating Systems.</li><li>Investigated low-overhead compression for main-memory efficiency and lower paging overhead.</li></ul></div></article>
+<article id="ieee-experience" class="experience-entry"><div class="experience-meta"><p class="experience-period">2025 – Present</p><p class="experience-location">Giza, Egypt</p></div><div><h3>HR Team Member</h3><p class="experience-company">IEEE CUSB — Cairo University Student Branch</p><ul><li>Member onboarding, event logistics, internal communication, and committee coordination.</li></ul></div></article>
+<article id="electrical-experience" class="experience-entry"><div class="experience-meta"><p class="experience-period">Jun 2025 – Oct 2025</p><p class="experience-location">Giza, Egypt</p></div><div><h3>Electrical &amp; Technical Intern</h3><p class="experience-company">EVA Pharma</p><ul><li>Assisted with backup generator testing and power distribution panels.</li><li>Supported AutoCAD schematic reviews, technical documentation, and operational reports.</li></ul></div></article>
+<article id="production-experience" class="experience-entry"><div class="experience-meta"><p class="experience-period">Jun 2025 – Aug 2025</p><p class="experience-location">Giza, Egypt</p></div><div><h3>Production Line Operator / Summer Trainee</h3><p class="experience-company">EVA Pharma</p><ul><li>Operated pharmaceutical packaging machinery under GMP standards.</li><li>Worked with maintenance engineers and supervisors on minor mechanical stoppages.</li></ul></div></article></div></section>
+    <section id="skills" class="skills-section" aria-labelledby="skillsHeading"><div class="container"><div class="section-heading"><div><p class="eyebrow">Skills / connected to the work</p><h2 id="skillsHeading">Tools, with evidence.</h2></div><p class="section-aside">Projects, fieldwork, and learning.<br>Follow the connections.</p></div><div id="skillsEvidence" class="skills-evidence"><div class="skills-tracer"><div><p class="eyebrow">FOLLOW A TOOL</p><h3>What’s behind the skill?</h3></div><div id="skillsTrailControls" class="evidence-controls"></div><div id="skillsTrailDetail" class="evidence-trail"><p class="trail-summary">Python: From first programs to a prediction API.</p><ol class="trail-links"><li><a class="trail-evidence-link" href="#credential-python"><span class="trail-kind">Learning</span>Getting started with Python</a><p class="trail-detail">Programming foundations</p></li><li><a class="trail-evidence-link" href="#credential-fcc"><span class="trail-kind">Learning</span>Data Analysis with Python</a><p class="trail-detail">Data analysis practice</p></li><li><a class="trail-evidence-link" href="#ml-internship"><span class="trail-kind">Fieldwork</span>AI &amp; Machine Learning Intern</a><p class="trail-detail">Commercial datasets and reproducible ML</p></li><li><a class="trail-evidence-link" href="#project-churn"><span class="trail-kind">Build</span>Customer Churn Prediction System</a><p class="trail-detail">Classification pipeline + FastAPI inference</p></li></ol></div></div><article class="skill-evidence-row"><h3>AI & data</h3><p class="skill-inventory">Scikit-learn · Pandas · NumPy · EDA · Model Evaluation · Hyperparameter Tuning</p></article><article class="skill-evidence-row"><h3>Programming</h3><p class="skill-inventory">C · C++ · Python · JavaScript · HTML5 · CSS3 · SQL · Verilog HDL · ARM Thumb-2 Assembly</p></article><article class="skill-evidence-row"><h3>Backend & embedded</h3><p class="skill-inventory">FastAPI · REST APIs · Bare-Metal STM32 · UART · SPI · I2C · ADC · PWM</p></article><article class="skill-evidence-row"><h3>Tools & workflow</h3><p class="skill-inventory">Git · GitHub · VS Code · Keil µVision · ModelSim · Power BI · AutoCAD</p></article></div><noscript><p>C, C++, Python, JavaScript, HTML5, CSS3, SQL, Verilog HDL, ARM Thumb-2 Assembly; Scikit-learn, Pandas, NumPy, FastAPI, STM32; Git, VS Code, Keil µVision, ModelSim, Power BI, AutoCAD.</p></noscript></div></section>
+    <section id="credentials" class="credentials-section container" aria-labelledby="credentialsHeading"><div class="section-heading"><div><p class="eyebrow">Credentials / learning evidence</p><h2 id="credentialsHeading">Work. Learning.<br><span class="heading-soft">The paper trail.</span></h2></div><p class="handwritten credential-note">Keep the receipts.</p></div><p class="credentials-intro">Six documents, six parts of the story. Industry experience, technical learning, and leading a team.</p><div id="credentialShelf" class="credential-shelf"><article class="credential" id="credential-atr"><a class="certificate-trigger" href="assets/certificates/atr-original.png" aria-label="Open original certificate: ATR — Summer Internship Program"><img src="assets/certificates/atr-thumb.webp" width="2500" height="1406" loading="lazy" alt="ATR — Summer Internship Program certificate awarded to Fady Fawzy"></a><p class="eyebrow">ATR · Akhnaton Trading &amp; Distribution</p><h3>Digital Transformation Internship</h3><p class="credential-date">1 September – 1 October 2026</p><p class="credential-subject">Industry experience · Digital transformation</p><p class="credential-verify-note">Artwork available · no public verification link</p></article>
+<article class="credential" id="credential-ml"><a class="certificate-trigger" href="ML.jpg" aria-label="Open original certificate: NVIDIA: Fundamentals of Machine Learning"><img src="assets/certificates/ml-thumb.webp" width="1100" height="852" loading="lazy" alt="NVIDIA: Fundamentals of Machine Learning certificate awarded to Fady Fawzy"></a><p class="eyebrow">Whizlabs / Coursera</p><h3>Fundamentals of ML</h3><p class="credential-date">June 18, 2026</p><p class="credential-subject">Machine learning · Model evaluation</p><a href="https://www.coursera.org/account/accomplishments/verify/RBSE776W6ASN" target="_blank" rel="noopener noreferrer">Verify with issuer ↗</a></article>
+<article class="credential" id="credential-python"><a class="certificate-trigger" href="Python.jpg" aria-label="Open original certificate: Programming for Everybody (Getting Started with Python)"><img src="assets/certificates/python-thumb.webp" width="1101" height="851" loading="lazy" alt="Programming for Everybody (Getting Started with Python) certificate awarded to Fady Fawzy"></a><p class="eyebrow">University of Michigan / Coursera</p><h3>Getting started with Python</h3><p class="credential-date">June 20, 2026</p><p class="credential-subject">Python · Programming foundations</p><a href="https://www.coursera.org/account/accomplishments/verify/JS4M16Q1NQ9B" target="_blank" rel="noopener noreferrer">Verify with issuer ↗</a></article>
+<article class="credential" id="credential-fcc"><a class="certificate-trigger" href="FreeCodeCamp.jpg" aria-label="Open original certificate: Data Analysis with Python"><img src="assets/certificates/fcc-thumb.webp" width="1257" height="843" loading="lazy" alt="Data Analysis with Python certificate awarded to Fady Fawzy"></a><p class="eyebrow">freeCodeCamp</p><h3>Data Analysis with Python</h3><p class="credential-date">July 9, 2026</p><p class="credential-subject">Python · Data analysis</p><a href="https://www.freecodecamp.org/certification/fcc-0f4aaa7e-288c-4693-9dd8-aa1d74daadcd/data-analysis-with-python-v7" target="_blank" rel="noopener noreferrer">Verify with issuer ↗</a></article>
+<article class="credential" id="credential-depi"><a class="certificate-trigger" href="DEBI.jpg" aria-label="Open original certificate: Digital Egypt Pioneers Program — Microsoft Power BI Specialist"><img src="assets/certificates/depi-thumb.webp" width="3508" height="2480" loading="lazy" alt="Digital Egypt Pioneers Program — Microsoft Power BI Specialist certificate awarded to Fady Fawzy"></a><p class="eyebrow">Digital Egypt Pioneers Program</p><h3>Microsoft Power BI Specialist</h3><p class="credential-date">November 2025 – July 2026</p><p class="credential-subject">Power BI · Business intelligence</p><p class="credential-verify-note">Artwork available · no public verification link</p></article>
+<article class="credential" id="credential-depi-leader"><a class="certificate-trigger" href="assets/certificates/depi-leader-original.jpg" aria-label="Open original certificate: DEPI Round 4 — Team Leader"><img src="assets/certificates/depi-leader-thumb.webp" width="3300" height="2550" loading="lazy" alt="DEPI Round 4 — Team Leader certificate awarded to Fady Fawzy"></a><p class="eyebrow">Digital Egypt Pioneers Program</p><h3>Team Leader Recognition</h3><p class="credential-date">November 2025 – July 2026</p><p class="credential-subject">Team leadership · Program contribution</p><p class="credential-verify-note">Artwork available · no public verification link</p></article></div><noscript><div class="noscript-certificates"><a href="ML.jpg">Machine Learning certificate</a><a href="Python.jpg">University of Michigan Python certificate</a><a href="FreeCodeCamp.jpg">freeCodeCamp certificate</a><a href="DEBI.jpg">DEPI Power BI certificate</a></div></noscript></section>
+    <section id="contact" class="contact-section" aria-labelledby="contactHeading"><div class="container contact-layout"><div class="contact-copy"><p class="eyebrow">Contact / next conversation</p><h2 id="contactHeading">Let’s figure<br>it out<span class="contact-period">.</span></h2><p>For an internship, a project, or a technical conversation, send me a note. Tell me what you’re working on.</p><div class="email-line"><a href="mailto:fady.fawzy2006@gmail.com">fady.fawzy2006@gmail.com</a><button id="copyEmail" class="icon-button" aria-label="Copy email address" type="button">⧉</button></div><a class="phone-link" href="tel:+201204788242">+20 120 478 8242</a><div class="contact-socials"><a href="https://github.com/Fady-Fawzy" target="_blank" rel="noopener noreferrer">GitHub ↗</a><a href="https://www.linkedin.com/in/fady-fawzy-youssef/" target="_blank" rel="noopener noreferrer">LinkedIn ↗</a><a href="Fady_Fawzy_CV_2026.pdf" download>CV ↓</a></div></div><form id="contactForm" class="contact-form" action="https://formspree.io/f/xaqzoldn" method="POST"><p class="form-caption utility">A note to Fady</p><div class="form-group"><label for="name">Your name</label><input id="name" name="name" autocomplete="name" required maxlength="120" placeholder="Your name"></div><div class="form-group"><label for="email">Email address</label><input type="email" id="email" name="email" autocomplete="email" required maxlength="254" placeholder="you@example.com"></div><div class="form-group"><label for="message">What’s on your mind?</label><textarea id="message" name="message" required maxlength="5000" rows="4" placeholder="A little context goes a long way."></textarea></div><button class="button button-primary" type="submit">Send message <span aria-hidden="true">↗</span></button><p id="contactStatus" class="form-status" role="status" aria-live="polite"></p></form></div></section>
+    <section id="newsletter" class="newsletter-section container" aria-labelledby="newsletterHeading"><div><p class="eyebrow">Occasional notes</p><h2 id="newsletterHeading">Follow the next build.</h2><p>Leave your email for project updates.</p></div><form id="newsletterForm" class="newsletter-form" action="https://script.google.com/macros/s/AKfycbyHU0_LGDwVDpdkUOVRTt_GPvmiWHOLdn83sLBx7Is2_wI5iJopZCNmiEyMte1QlFTg/exec" method="POST"><label for="newsletterEmail">Email for project updates</label><div class="newsletter-input"><input type="email" id="newsletterEmail" name="email" autocomplete="email" required placeholder="you@example.com"><button class="button button-secondary" type="submit">Subscribe ↗</button></div><p id="newsletterStatus" class="form-status" role="status" aria-live="polite"></p></form></section>
   </main>
-
-  <!-- 
-    ===========================================================================
-    FOOTER
-    ===========================================================================
-    Includes custom bottom gradient border and links.
-  -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-content">
-        <p>© 2026 Fady Fawzy. All rights reserved.</p>
-        <div class="footer-links">
-          <a href="https://github.com/fady111-f" target="_blank" aria-label="GitHub Profile">GitHub</a>
-          <a href="https://www.linkedin.com/in/fady-fawzy1/" target="_blank" aria-label="LinkedIn Profile">LinkedIn</a>
-          <a href="mailto:fady.fawzy2006@gmail.com" aria-label="Send Email">Email</a>
-        </div>
-      </div>
-    </div>
-  </footer>
-
-  <!-- 
-    ===========================================================================
-    FLOATING WIDGET ELEMENT SYSTEM
-    ===========================================================================
-  -->
-
-  <!-- Back to Top Arrow (Becomes visible dynamically scrolled past 500px) -->
-  <button class="back-to-top" id="backToTop" aria-label="Back to top">&#8679;</button>
-
-  <!-- Custom Cursor Graphics (Controlled via loopCursor animation frames inside app.js) -->
-  <div class="cursor-dot" id="cursorDot"></div>
-  <div class="cursor-outline" id="cursorOutline"></div>
-
-  <!-- Quick Floating Talk Action (Scales out when scrolling down, returns when scrolling up) -->
-  <button class="floating-contact-btn" id="floatingContactBtn" aria-label="Quick contact">
-    <span class="floating-contact-icon"><i data-feather="message-circle"></i></span>
-    <span class="floating-contact-text">Let's talk</span>
-  </button>
-
-  <!-- Click Copy Clipboard Notification Popup -->
-  <div class="copy-toast" id="copyToast">Copied to clipboard!</div>
-
-  <!-- 
-    ===========================================================================
-    DEVELOPER TERMINAL (EASTER EGG)
-    ===========================================================================
-  -->
-  <div id="devTerminal" class="dev-terminal hidden">
-    <div class="terminal-header">
-      <div class="terminal-buttons">
-        <span class="close-btn" id="termCloseBtn"></span>
-        <span class="min-btn"></span>
-        <span class="max-btn"></span>
-      </div>
-      <div class="terminal-title">fady@portfolio:~ (developer mode)</div>
-    </div>
-    <div class="terminal-body" id="termBody">
-      <div class="terminal-output" id="termOutput"></div>
-      <div class="terminal-input-line">
-        <span class="terminal-prompt">fady@portfolio:~$</span>
-        <input type="text" id="termInput" autocomplete="off" spellcheck="false" autofocus />
-      </div>
-    </div>
-  </div>
-
-  <!-- Firebase App & Services SDK Compat (v10 CDN) -->
-  <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-
-  <!-- Icon Library (pinned version for stability) -->
-  <script defer src="https://unpkg.com/feather-icons@4.29.2/dist/feather.min.js"></script>
-
-  <!-- Vanilla Tilt for 3D Project Cards -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
-  
-  <!-- Core JavaScript Hook -->
-  <script defer src="firebase-config.js"></script>
-  <script defer src="app.js"></script>
+  <div class="closing-signature container" aria-hidden="true"><span>Always a work in progress.</span><strong>Fady Fawzy<span>.</span></strong></div><footer class="footer container"><p>© 2026 Fady Fawzy Youssef</p><p class="utility">Made of curiosity, code, and a few late nights.</p><a href="#hero">Back to the top ↑</a></footer><div id="copyToast" class="copy-toast" role="status" aria-live="polite"></div>
+  <dialog id="credentialDialog" class="credential-dialog" aria-labelledby="certificateTitle"><div class="viewer-header"><span class="utility" id="certificatePosition">Learning evidence</span><button id="certificateClose" class="viewer-close" type="button" aria-label="Close certificate viewer" autofocus><span aria-hidden="true">×</span><span>Close</span></button></div><div class="viewer-art"><img id="certificateImage" alt=""></div><div class="viewer-details"><p id="certificateIssuer" class="eyebrow"></p><h2 id="certificateTitle"></h2><p id="certificateIssuerNote"></p><p id="certificateDate" class="utility"></p><p id="certificateSubject"></p><div class="viewer-actions"><a id="certificateVerify" class="button button-primary" target="_blank" rel="noopener noreferrer">Verify with issuer ↗</a><p id="certificateNoVerify" class="verification-note" hidden>Certificate artwork supplied. No public verification link provided.</p><a id="certificateOriginal" class="text-link" target="_blank" rel="noopener noreferrer">Open original artwork ↗</a></div></div><div class="viewer-navigation"><button id="certificatePrev" type="button">← Previous</button><span class="utility">Use ← / → to browse</span><button id="certificateNext" type="button">Next →</button></div></dialog>
+  <dialog id="devTerminal" class="dev-terminal" aria-labelledby="terminalTitle"><div class="terminal-header"><h2 id="terminalTitle">fady@workbench:~</h2><button id="termCloseBtn" class="icon-button" type="button" aria-label="Close developer terminal">✕</button></div><div class="terminal-body" id="termBody"><div id="termOutput" class="terminal-output" aria-live="polite" aria-relevant="additions"></div><form id="terminalForm" class="terminal-input-line"><label for="termInput">fady:~$</label><input id="termInput" type="text" autocomplete="off" spellcheck="false" maxlength="600" aria-label="Terminal command"><button class="terminal-run" type="submit" aria-label="Run terminal command">↵</button></form></div></dialog>
+  <dialog id="helloWorldDialog" class="hello-dialog" aria-labelledby="helloTitle"><button id="helloClose" class="icon-button" type="button" aria-label="Close Hello World" autofocus>✕</button><p class="eyebrow">A familiar first step</p><h2 id="helloTitle">Hello, World<span>.</span></h2><p class="handwritten">Every build starts somewhere.</p><pre>printf("Hello, World!\n");
+print("Hello, World!")
+std::cout &lt;&lt; "Hello, World!";
+console.log("Hello, World!");</pre><p>Type <kbd>terminal</kbd> on the page to take a look under the hood.</p></dialog>
+  <template id="churnTemplate"><div class="project-kicker"><span>Machine learning / training to inference</span><span data-field="year"></span></div><div class="churn-spread"><div class="project-story"><h3 data-field="title"></h3><p data-field="description"></p><div class="churn-metrics"><div><strong>~77<span>%</span></strong><small>validation accuracy</small></div><div><strong>~0.80</strong><small>ROC-AUC</small></div></div><p class="metric-note">Reported validation results · threshold tuned</p><p data-field="tags" class="project-tools"></p><div data-field="links" class="project-links"></div></div><div class="pipeline-sheet"><div class="sheet-meta"><span>TRAINING → INFERENCE</span><span class="pipeline-position"></span></div><p class="pipeline-instruction">Trace the data. Inspect the handoff.</p><div class="pipeline-nodes" role="group" aria-label="Explore the churn pipeline"></div><div id="pipelineDetail" class="pipeline-detail" aria-live="polite"></div><p class="diagram-caption">Architecture sketch · based on the project’s source</p></div></div><details class="project-notes"><summary>Technical notes</summary><ul data-field="details"></ul></details></template>
+  <template id="nurseTemplate"><div class="project-kicker"><span>Embedded / from the registers up</span><span data-field="year"></span></div><div class="nurse-spread"><figure class="robot-schematic"><figcaption class="utility">SYSTEM SKETCH / STM32</figcaption><div class="sensor-row"><span>Heart rate / SpO₂</span><span>IV / pressure</span></div><div class="bus-line"><span>I2C · SPI · ADC</span></div><div class="mcu-block"><span class="utility">REGISTER LEVEL</span><strong>STM32</strong><small>ARM Thumb-2 Assembly</small></div><div class="bus-line"><span>UART · PWM · interrupts</span></div><div class="sensor-row"><span>TFT / Bluetooth</span><span>RFID / navigation</span></div><p class="handwritten">No HAL. No shortcuts.</p></figure><div class="project-story"><h3 data-field="title"></h3><p data-field="description"></p><ul data-field="details" class="project-detail-list"></ul><p data-field="tags" class="project-tools"></p><div data-field="links" class="project-links"></div></div></div></template>
+  <template id="softwareTemplate"><div class="project-kicker"><span data-field="category"></span><span data-field="year"></span></div><div class="software-art" aria-hidden="true"></div><h3 data-field="title"></h3><p data-field="description"></p><p data-field="tags" class="project-tools"></p><div data-field="links" class="project-links"></div><details class="project-notes"><summary>Technical notes</summary><ul data-field="details"></ul></details></template>
+  <template id="entryTemplate"><div class="entry-symbol" aria-hidden="true"></div><div class="entry-content"><div class="project-kicker"><span data-field="category"></span><span data-field="year"></span></div><h3 data-field="title"></h3><p data-field="description"></p><p data-field="tags" class="project-tools"></p><div data-field="links" class="project-links"></div></div></template>
 </body>
-
 </html>

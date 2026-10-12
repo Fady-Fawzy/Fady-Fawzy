@@ -1,557 +1,249 @@
-/**
- * ============================================================================
- * FADY FAWZY PORTFOLIO - PREMIUM ADMINISTRATIVE ENGINE (admin.js)
- * ============================================================================
- * Purpose: Operates the Google Firebase Auth state loops, secure database 
- * writing (CRUD) pipelines, newsletter subscribers exports, and tab controllers.
- * Enhanced with SweetAlert2 notifications and Feather Icons.
- * ============================================================================
- */
-
-// ===== FIREBASE CONFIGURATION =====
-// firebaseConfig is now loaded globally from firebase-config.js
-
-let db = null;
-let isFirebaseEnabled = false;
-
-// Initialize Firebase
-if (firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("PLACEHOLDER") && typeof firebase !== "undefined") {
-  try {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-    isFirebaseEnabled = true;
-    console.log("Admin Firebase interface initialized successfully.");
-  } catch (error) {
-    console.error("Admin Firebase initialization failed: ", error);
+/* Existing Firebase auth/CRUD flows, with shared defaults and safe DOM rendering. */
+(function () {
+  'use strict';
+  const C = window.PortfolioContent;
+  const $ = id => document.getElementById(id);
+  const node = (tag, value, className) => { const el = document.createElement(tag); if (value !== undefined) el.textContent = value; if (className) el.className = className; return el; };
+  let db = null;
+  let projects = new Map();
+  let subscribers = [];
+  let seeding = false;
+  const skillInputs = { languages: 'skillsLanguages', data: 'skillsData', embedded: 'skillsEmbedded', tools: 'skillsTools', soft: 'skillsSoft' };
+  function notice(title, text = '', icon = 'info') {
+    if (window.Swal) return window.Swal.fire({ title, text, icon });
+    window.alert(title + (text ? '\n' + text : '')); return Promise.resolve({});
   }
-} else {
-  Swal.fire('Warning', 'Firebase placeholder active. Please configure your firebaseConfig in admin.js to enable dynamic features!', 'warning');
-}
-
-// ===== DOM ELEMENT CACHE =====
-const loginWrapper = document.getElementById('loginWrapper');
-const dashboardWrapper = document.getElementById('dashboardWrapper');
-const loginForm = document.getElementById('loginForm');
-const adminEmailInput = document.getElementById('adminEmail');
-const adminPasswordInput = document.getElementById('adminPassword');
-const logoutBtn = document.getElementById('logoutBtn');
-
-// Database caching variables
-let loadedProjects = {};
-let loadedSubscribers = [];
-
-// SweetAlert2 Toast Configuration
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true,
-  background: 'rgba(20, 20, 25, 0.95)',
-  color: '#fff',
-  iconColor: '#6c63ff'
-});
-
-// ===== SECURE AUTHENTICATION STATE TRACKER =====
-if (isFirebaseEnabled) {
-  firebase.auth().onAuthStateChanged(user => {
-    if (user) {
-      loginWrapper.classList.add('hide');
-      dashboardWrapper.classList.remove('hide');
-      
-      // Load all dynamic elements from database immediately
-      loadStatsData();
-      loadProjectsData();
-      loadSkillsData();
-      loadSubscribersData();
-      
-      // Initial render for icons
-      if(typeof feather !== 'undefined') feather.replace();
-    } else {
-      loginWrapper.classList.remove('hide');
-      dashboardWrapper.classList.add('hide');
-    }
-  });
-}
-
-// Handle Login Submission
-loginForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (!isFirebaseEnabled) {
-    Toast.fire({ icon: 'error', title: 'Firebase Config Missing' });
-    return;
+  async function confirm(title, text, action) {
+    if (window.Swal) return (await window.Swal.fire({ title, text, icon: 'warning', showCancelButton: true, confirmButtonText: action, cancelButtonText: 'Cancel' })).isConfirmed;
+    return window.confirm(title + '\n' + text);
   }
-
-  const email = adminEmailInput.value.trim();
-  const password = adminPasswordInput.value.trim();
-
-  const submitBtn = loginForm.querySelector('button[type="submit"]');
-  const originalHtml = submitBtn.innerHTML;
-  submitBtn.innerHTML = '<span>Verifying...</span>';
-  submitBtn.style.pointerEvents = 'none';
-
-  try {
-    await firebase.auth().signInWithEmailAndPassword(email, password);
-    Toast.fire({ icon: 'success', title: 'Console Unlocked!' });
-    loginForm.reset();
-  } catch (error) {
-    console.error("Login verification failed: ", error);
-    Swal.fire('Authentication Failed', error.message, 'error');
-  } finally {
-    submitBtn.innerHTML = originalHtml;
-    submitBtn.style.pointerEvents = '';
-    if(typeof feather !== 'undefined') feather.replace();
+  const loginStatus = node('p', '', 'admin-status'); loginStatus.setAttribute('role', 'status'); $('loginForm').append(loginStatus);
+  function rowMessage(tbody, columns, message) { const tr = node('tr'); const td = node('td', message); td.colSpan = columns; tr.append(td); tbody.replaceChildren(tr); }
+  function cloudReady() { if (db && window.firebase?.auth().currentUser) return true; notice('Sign in required', 'A Firebase connection and signed-in account are required.'); return false; }
+  async function formAction(form, action) {
+    const button = form.querySelector('button[type="submit"]'); if (button.disabled) return;
+    const original = [...button.childNodes].map(child => child.cloneNode(true)); button.disabled = true; button.textContent = 'Saving…';
+    try { await action(); }
+    catch { await notice('Save failed', 'The data was not saved. Check your connection and Firestore permissions.', 'error'); }
+    finally { button.disabled = false; button.replaceChildren(...original); }
   }
-});
-
-// Handle Logout Trigger
-logoutBtn.addEventListener('click', async () => {
-  if (!isFirebaseEnabled) return;
-  try {
-    await firebase.auth().signOut();
-    Toast.fire({ icon: 'success', title: 'Console Locked Successfully!' });
-  } catch (error) {
-    console.error("Error signing out: ", error);
-    Swal.fire('Error', 'Failed to lock console.', 'error');
+  function displayAcademic(record) {
+    const academic = C.mergeAcademic(record);
+    $('statGPA').value = academic.department.gpa; $('statRank').value = academic.department.rank;
+    $('statPrepGPA').value = academic.preparatory.gpa; $('statPrepRank').value = academic.preparatory.rank;
+    $('statsStatus').textContent = record && record.schemaVersion !== 2 ? 'Legacy summary found. The public site uses current CV records until you explicitly save these separate academic standings.' : 'Separate academic records. The project count is calculated from the displayed inventory.';
   }
-});
-
-// ===== DASHBOARD TABS NAVIGATION SYSTEM =====
-const tabButtons = document.querySelectorAll('.admin-tab-btn');
-const tabSections = document.querySelectorAll('.admin-panel-section');
-
-tabButtons.forEach(btn => {
-  btn.addEventListener('click', () => {
-    // De-activate all tabs
-    tabButtons.forEach(b => b.classList.remove('active'));
-    tabSections.forEach(s => s.classList.remove('active'));
-
-    // Activate selected tab
-    btn.classList.add('active');
-    const tabName = btn.getAttribute('data-tab');
-    const section = document.getElementById(`tab-${tabName}`);
-    section.classList.add('active');
-    
-    // Re-trigger animation by re-inserting the element
-    section.style.animation = 'none';
-    section.offsetHeight; /* trigger reflow */
-    section.style.animation = null; 
-  });
-});
-
-// ===== 1. QUICK STATS CRUD OPERATOR =====
-const statsForm = document.getElementById('statsForm');
-const statGPA = document.getElementById('statGPA');
-const statRank = document.getElementById('statRank');
-const statCount = document.getElementById('statCount');
-
-async function loadStatsData() {
-  if (!isFirebaseEnabled || !db) return;
-  try {
-    const doc = await db.collection("stats").doc("summary").get();
-    if (doc.exists) {
-      const data = doc.data();
-      statGPA.value = data.gpa || "";
-      statRank.value = data.rank || "";
-      statCount.value = data.projectsCount || "";
-    }
-  } catch (error) {
-    console.error("Error loading stats database: ", error);
+  function projectActions(project, titleId) {
+    const actions = node('div', undefined, 'project-actions');
+    actions.setAttribute('role','group'); actions.setAttribute('aria-label','Actions for ' + project.title);
+    const add = (label, className, attribute) => {
+      const button = node('button', label, 'action-badge ' + className); button.type = 'button'; button.dataset[attribute] = project.id; button.setAttribute('aria-describedby',titleId); actions.append(button);
+    };
+    if (project.archived) add('Restore','badge-edit','restore');
+    else { add('Edit','badge-edit','edit'); add(C.canonicalId(project) ? 'Archive' : 'Delete','badge-delete','remove'); }
+    return actions;
   }
-}
-
-statsForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (!isFirebaseEnabled || !db) return;
-
-  const submitBtn = statsForm.querySelector('button[type="submit"]');
-  const originalHtml = submitBtn.innerHTML;
-  submitBtn.innerHTML = '<span><i data-feather="loader" class="spin"></i> Saving...</span>';
-  submitBtn.style.pointerEvents = 'none';
-  if(typeof feather !== 'undefined') feather.replace();
-
-  try {
-    await db.collection("stats").doc("summary").set({
-      gpa: statGPA.value.trim(),
-      rank: statRank.value.trim(),
-      projectsCount: parseInt(statCount.value)
-    });
-    Toast.fire({ icon: 'success', title: 'Statistics Updated Successfully' });
-  } catch (error) {
-    console.error("Error writing stats database: ", error);
-    Swal.fire('Update Failed', 'Failed to write to Firestore database.', 'error');
-  } finally {
-    submitBtn.innerHTML = originalHtml;
-    submitBtn.style.pointerEvents = '';
-    if(typeof feather !== 'undefined') feather.replace();
+  function focusProjectControl(id) {
+    const controls = [...$('projectInventory').querySelectorAll('[data-edit]')].filter(button => button.getClientRects().length);
+    (controls.find(button => button.dataset.edit === id) || controls[0] || $('addProjectBtn')).focus();
   }
-});
-
-// ===== 2. PROJECTS CRUD INVENTORY =====
-const projectsTableBody = document.getElementById('projectsTableBody');
-const addProjectBtn = document.getElementById('addProjectBtn');
-const cancelProjectBtn = document.getElementById('cancelProjectBtn');
-const projectFormContainer = document.getElementById('projectFormContainer');
-const projectForm = document.getElementById('projectForm');
-const projectFormTitle = document.getElementById('projectFormTitle');
-const projSubmitBtnText = document.getElementById('projSubmitBtnText');
-
-// Form Inputs
-const projectIdInput = document.getElementById('projectId');
-const projTitleInput = document.getElementById('projTitle');
-const projDescInput = document.getElementById('projDesc');
-const projCategoryInput = document.getElementById('projCategory');
-const projYearInput = document.getElementById('projYear');
-const projIconInput = document.getElementById('projIcon');
-const projRepoInput = document.getElementById('projRepo');
-const projTagsInput = document.getElementById('projTags');
-
-async function loadProjectsData() {
-  if (!isFirebaseEnabled || !db) return;
-  try {
-    const snapshot = await db.collection("projects").orderBy("year", "desc").get();
-    projectsTableBody.innerHTML = "";
-    loadedProjects = {};
-
-    if (snapshot.empty) {
-      projectsTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No projects found in database. Click '+ Add New' to start!</td></tr>`;
-      return;
-    }
-
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      const id = doc.id;
-      loadedProjects[id] = data;
-
-      const iconMarkup = `<i data-feather="${data.icon || 'folder'}" style="width:20px; height:20px; color: var(--accent-primary);"></i>`;
-      
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td style="text-align: center;">${iconMarkup}</td>
-        <td style="font-weight: 600; color: var(--text-primary);">${data.title}</td>
-        <td><span class="project-tag" style="text-transform: uppercase; font-size: 0.65rem;">${data.category}</span></td>
-        <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-secondary);">${data.year}</td>
-        <td style="text-align: right;">
-          <button class="action-badge badge-edit" onclick="editProject('${id}')"><i data-feather="edit-2" style="width:12px; height:12px;"></i> Edit</button>
-          <button class="action-badge badge-delete" onclick="deleteProject('${id}')"><i data-feather="trash-2" style="width:12px; height:12px;"></i> Delete</button>
-        </td>
-      `;
-      projectsTableBody.appendChild(tr);
-    });
-    
-    // Initialize icons in the new rows
-    if(typeof feather !== 'undefined') feather.replace();
-    
-  } catch (error) {
-    console.error("Error loading projects database: ", error);
+  async function loadStatsData() {
+    try { const doc = await db.collection('stats').doc('summary').get(); displayAcademic(doc.exists ? doc.data() : null); }
+    catch { $('statsStatus').textContent = 'Could not read the cloud summary. Current CV defaults shown; no data has been changed.'; }
   }
-}
-
-// Open Form for Adding New Project
-addProjectBtn.addEventListener('click', () => {
-  projectForm.reset();
-  projectIdInput.value = "";
-  projectFormTitle.textContent = "Add New Project";
-  projSubmitBtnText.innerHTML = '<i data-feather="check"></i> Save Project';
-  projectFormContainer.classList.remove('hide');
-  projectFormContainer.scrollIntoView({ behavior: 'smooth' });
-  if(typeof feather !== 'undefined') feather.replace();
-});
-
-// Close Project Form
-cancelProjectBtn.addEventListener('click', () => {
-  projectFormContainer.classList.add('hide');
-  projectForm.reset();
-});
-
-// Submit Project (Create/Update)
-projectForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (!isFirebaseEnabled || !db) return;
-
-  const id = projectIdInput.value;
-  const tagsArray = projTagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-
-  const payload = {
-    title: projTitleInput.value.trim(),
-    description: projDescInput.value.trim(),
-    category: projCategoryInput.value,
-    year: projYearInput.value.trim(),
-    icon: projIconInput.value.trim() || "folder",
-    repoLink: projRepoInput.value.trim() || "",
-    tags: tagsArray
-  };
-
-  const submitBtn = projectForm.querySelector('button[type="submit"]');
-  submitBtn.innerHTML = '<span><i data-feather="loader" class="spin"></i> Saving...</span>';
-  submitBtn.style.pointerEvents = 'none';
-  if(typeof feather !== 'undefined') feather.replace();
-
-  try {
-    if (id) {
-      await db.collection("projects").doc(id).update(payload);
-      Toast.fire({ icon: 'success', title: 'Project Updated Successfully' });
-    } else {
-      await db.collection("projects").add(payload);
-      Toast.fire({ icon: 'success', title: 'Project Created Successfully' });
-    }
-
-    projectFormContainer.classList.add('hide');
-    projectForm.reset();
-    loadProjectsData(); 
-  } catch (error) {
-    console.error("Error writing projects database: ", error);
-    Swal.fire('Error', 'Failed to save project details.', 'error');
-  } finally {
-    submitBtn.innerHTML = `<span><i data-feather="check"></i> ${id ? 'Update Project' : 'Save Project'}</span>`;
-    submitBtn.style.pointerEvents = '';
-    if(typeof feather !== 'undefined') feather.replace();
-  }
-});
-
-// Populate Form for Editing Project
-window.editProject = function(id) {
-  const project = loadedProjects[id];
-  if (!project) return;
-
-  projectIdInput.value = id;
-  projTitleInput.value = project.title || "";
-  projDescInput.value = project.description || "";
-  projCategoryInput.value = project.category || "embedded";
-  projYearInput.value = project.year || "";
-  projIconInput.value = project.icon || "folder";
-  projRepoInput.value = project.repoLink || "";
-  projTagsInput.value = (project.tags || []).join(', ');
-
-  projectFormTitle.textContent = "Edit Project Details";
-  projSubmitBtnText.innerHTML = '<i data-feather="check"></i> Update Project';
-  projectFormContainer.classList.remove('hide');
-  projectFormContainer.scrollIntoView({ behavior: 'smooth' });
-  if(typeof feather !== 'undefined') feather.replace();
-};
-
-// Delete Project Document
-window.deleteProject = async function(id) {
-  const project = loadedProjects[id];
-  if (!project) return;
-
-  const result = await Swal.fire({
-    title: 'Are you sure?',
-    text: `You are about to delete "${project.title}". This cannot be undone!`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Yes, delete it!',
-    cancelButtonText: 'Cancel'
-  });
-
-  if (result.isConfirmed) {
+  async function loadProjectsData() {
     try {
-      await db.collection("projects").doc(id).delete();
-      Swal.fire('Deleted!', 'The project has been deleted.', 'success');
-      loadProjectsData(); 
-    } catch (error) {
-      console.error("Error deleting project: ", error);
-      Swal.fire('Error', 'Failed to delete the project.', 'error');
-    }
+      const snapshot = await db.collection('projects').get();
+      const records = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      const displayed = C.mergeProjects(records); projects = new Map();
+      const inventory = [...displayed];
+      if ($('showArchived').checked) {
+        for (const record of records.filter(item => item.schemaVersion === 2 && item.archived)) {
+          const id = C.canonicalId(record);
+          const base = C.projects.find(project => project.id === id);
+          if (base) inventory.push({ ...C.normalizeProject(record, base), id, archived: true });
+        }
+      }
+      const fragment = document.createDocumentFragment();
+      const cards = document.createDocumentFragment();
+      for (const project of inventory) {
+        const matches = records.filter(record => (C.canonicalId(record) || record.id) === project.id);
+        const stored = matches.find(record => record.schemaVersion === 2) || matches[0];
+        projects.set(project.id, { ...project, docId: stored?.id || project.id, canonicalId: C.canonicalId(project) });
+        const kind = C.canonicalId(project) ? 'Default project' : 'Custom project';
+        const status = project.archived ? 'Archived' : 'Visible';
+        const safeId = project.id.replace(/[^a-z0-9_-]/gi,'-');
+        const tableTitleId = 'table-title-' + safeId, cardTitleId = 'record-title-' + safeId;
+        const tr = node('tr');
+        const titleCell = node('td', project.title, 'inventory-title'); titleCell.id = tableTitleId;
+        const recordCell = node('td'); recordCell.append(node('span',kind,'record-kind'), node('span',status,'record-status'));
+        const actionCell = node('td'); actionCell.append(projectActions(project,tableTitleId));
+        tr.append(titleCell, node('td', project.category), node('td', project.year), recordCell, actionCell); fragment.append(tr);
+        const item = node('li'); const card = node('article',undefined,'project-record'); card.dataset.record = project.id;
+        const heading = node('h3',project.title); heading.id = cardTitleId;
+        const meta = node('p',project.category + ' · ' + project.year,'record-meta');
+        const info = node('div',undefined,'record-state'); info.append(node('span',kind,'record-kind'), node('span',status,'record-status'));
+        card.append(heading,meta,info,projectActions(project,cardTitleId)); item.append(card); cards.append(item);
+      }
+      $('projectsTableBody').replaceChildren(fragment);
+      $('projectRecords').replaceChildren(cards);
+      if (!inventory.length) { rowMessage($('projectsTableBody'),5,'No projects in this view. Add a project or show archived projects.'); $('projectRecords').append(node('li','No projects in this view. Add a project or show archived projects.','inventory-empty')); }
+      $('statCount').value = displayed.length;
+    } catch { rowMessage($('projectsTableBody'), 5, 'Could not load projects. Check connection and permissions.'); $('projectRecords').replaceChildren(node('li','Could not load projects. Check connection and permissions.','inventory-empty')); }
   }
-};
-
-// ===== 3. TECHNICAL ARSENAL CRUD OPERATOR =====
-const skillsForm = document.getElementById('skillsForm');
-const skillsLanguages = document.getElementById('skillsLanguages');
-const skillsTools = document.getElementById('skillsTools');
-const skillsSoft = document.getElementById('skillsSoft');
-
-async function loadSkillsData() {
-  if (!isFirebaseEnabled || !db) return;
-  try {
-    const snapshot = await db.collection("skills").get();
-    if (!snapshot.empty) {
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const cat = data.category;
-        const list = (data.list || []).join(', ');
-
-        if (cat === "languages") skillsLanguages.value = list;
-        else if (cat === "tools") skillsTools.value = list;
-        else if (cat === "soft") skillsSoft.value = list;
+  async function loadSkillsData() {
+    try { const snapshot = await db.collection('skills').get(); const inventory = C.mergeSkills(snapshot.docs.map(doc => doc.data())); Object.entries(skillInputs).forEach(([category, id]) => { $(id).value = inventory[category].join(', '); }); }
+    catch { await notice('Skills unavailable', 'Could not read skills. Current defaults remain in the form.', 'warning'); }
+  }
+  async function loadSubscribersData() {
+    try {
+      const snapshot = await db.collection('subscribers').orderBy('timestamp', 'desc').get(); subscribers = [];
+      const fragment = document.createDocumentFragment();
+      snapshot.docs.forEach(doc => {
+        const data = doc.data(); const email = C.text(data.email, 254);
+        let date = 'Date unavailable';
+        try { const value = data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp?.seconds ? data.timestamp.seconds * 1000 : data.timestamp); if (!Number.isNaN(value.getTime())) date = value.toLocaleString(); } catch { /* Malformed dates are displayed honestly. */ }
+        subscribers.push({ email, subscribedAt: date }); const tr = node('tr'); tr.append(node('td', email), node('td', date)); fragment.append(tr);
       });
-    }
-  } catch (error) {
-    console.error("Error loading skills database: ", error);
+      $('subscribersTableBody').replaceChildren(fragment);
+      if (!subscribers.length) rowMessage($('subscribersTableBody'), 2, 'No subscribers in the cloud collection.');
+    } catch { rowMessage($('subscribersTableBody'), 2, 'Could not read subscribers. Check connection and permissions.'); }
   }
-}
-
-skillsForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (!isFirebaseEnabled || !db) return;
-
-  const languagesList = skillsLanguages.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
-  const toolsList = skillsTools.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
-  const softList = skillsSoft.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
-
-  const submitBtn = skillsForm.querySelector('button[type="submit"]');
-  const originalHtml = submitBtn.innerHTML;
-  submitBtn.innerHTML = '<span><i data-feather="loader" class="spin"></i> Saving...</span>';
-  submitBtn.style.pointerEvents = 'none';
-  if(typeof feather !== 'undefined') feather.replace();
-
-  try {
-    await db.collection("skills").doc("languages").set({ category: "languages", list: languagesList });
-    await db.collection("skills").doc("tools").set({ category: "tools", list: toolsList });
-    await db.collection("skills").doc("soft").set({ category: "soft", list: softList });
-    Toast.fire({ icon: 'success', title: 'Arsenal Synchronized Successfully' });
-  } catch (error) {
-    console.error("Error writing skills database: ", error);
-    Swal.fire('Error', 'Failed to write skills catalog.', 'error');
-  } finally {
-    submitBtn.innerHTML = originalHtml;
-    submitBtn.style.pointerEvents = '';
-    if(typeof feather !== 'undefined') feather.replace();
+  async function loadDashboard() { await Promise.allSettled([loadStatsData(), loadProjectsData(), loadSkillsData(), loadSubscribersData()]); }
+  $('loginForm').addEventListener('submit', async event => {
+    event.preventDefault(); if (!db) { loginStatus.textContent = 'Firebase is unavailable. Check the network and firebase-config.js.'; return; }
+    const button = event.currentTarget.querySelector('button'); if (button.disabled) return;
+    button.disabled = true; loginStatus.textContent = 'Signing in…';
+    try { await window.firebase.auth().signInWithEmailAndPassword($('adminEmail').value.trim(), $('adminPassword').value); $('loginForm').reset(); loginStatus.textContent = ''; }
+    catch { loginStatus.textContent = 'Sign-in failed. Check your details, connection, and authorized domain.'; }
+    finally { button.disabled = false; }
+  });
+  $('logoutBtn').addEventListener('click', async () => {
+    if (!db) return;
+    try { await window.firebase.auth().signOut(); } catch { await notice('Sign-out failed', 'Check your connection and try again.', 'error'); }
+  });
+  document.querySelectorAll('.admin-tab-btn').forEach(button => button.addEventListener('click', () => {
+    document.querySelectorAll('.admin-tab-btn').forEach(item => { item.classList.toggle('active', item === button); item.setAttribute('aria-pressed', String(item === button)); });
+    document.querySelectorAll('.admin-panel-section').forEach(panel => panel.classList.toggle('active', panel.id === 'tab-' + button.dataset.tab));
+  }));
+  $('statsForm').addEventListener('submit', event => {
+    event.preventDefault(); if (!cloudReady()) return;
+    formAction(event.currentTarget, async () => {
+      await db.collection('stats').doc('summary').set({ schemaVersion: 2, department: { gpa: Number($('statGPA').value).toFixed(2), rank: $('statRank').value.trim() }, preparatory: { gpa: Number($('statPrepGPA').value).toFixed(2), rank: $('statPrepRank').value.trim() } }, { merge: true });
+      await loadStatsData(); await notice('Academic records saved', 'Both standings are now stored separately.', 'success');
+    });
+  });
+  function openProject(project) {
+    $('projectForm').reset(); $('projectId').value = project?.id || '';
+    $('projectFormTitle').textContent = project ? 'Edit project' : 'Add project';
+    $('projSubmitBtnText').textContent = project ? 'Save changes' : 'Save project';
+    if (project) { $('projTitle').value = project.title; $('projDesc').value = project.description; $('projCategory').value = project.category; $('projYear').value = project.year; $('projIcon').value = project.icon || 'folder'; $('projRepo').value = project.repoLink; $('projMedia').value = project.mediaLink || ''; $('projTags').value = project.tags.join(', '); }
+    $('projectFormContainer').classList.remove('hide'); $('projTitle').focus();
   }
-});
-
-// ===== 4. CRM NEWSLETTER SUBSCRIBERS =====
-const subscribersTableBody = document.getElementById('subscribersTableBody');
-const exportSubscribersBtn = document.getElementById('exportSubscribersBtn');
-
-async function loadSubscribersData() {
-  if (!isFirebaseEnabled || !db) return;
-  try {
-    const snapshot = await db.collection("subscribers").orderBy("timestamp", "desc").get();
-    subscribersTableBody.innerHTML = "";
-    loadedSubscribers = [];
-
-    if (snapshot.empty) {
-      subscribersTableBody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: var(--text-muted);">No email subscribers found in CRM.</td></tr>`;
+  $('addProjectBtn').addEventListener('click', () => openProject());
+  $('cancelProjectBtn').addEventListener('click', () => { $('projectFormContainer').classList.add('hide'); $('projectForm').reset(); $('addProjectBtn').focus(); });
+  $('projectInventory').addEventListener('click', async event => {
+    const restore = event.target.closest('[data-restore]');
+    if (restore) {
+      if (!cloudReady()) return;
+      const project = projects.get(restore.dataset.restore); if (!project) return;
+      restore.disabled = true;
+      try { await db.collection('projects').doc(project.docId).set({ archived: false }, { merge: true }); await loadProjectsData(); $('inventoryStatus').textContent = project.title + ' restored.'; focusProjectControl(project.id); }
+      catch { restore.disabled = false; await notice('Restore failed', 'Check connection and permissions.', 'error'); }
       return;
     }
-
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      const email = data.email;
-      let timestampText = "Offline Local Record";
-
-      if (data.timestamp) {
-        const seconds = data.timestamp.seconds || Math.floor(new Date(data.timestamp).getTime() / 1000);
-        timestampText = new Date(seconds * 1000).toLocaleString();
+    const edit = event.target.closest('[data-edit]'); if (edit) { openProject(projects.get(edit.dataset.edit)); return; }
+    const remove = event.target.closest('[data-remove]'); if (!remove || !cloudReady()) return;
+    const project = projects.get(remove.dataset.remove); if (!project) return;
+    const canonical = !!project.canonicalId;
+    if (!await confirm(canonical ? 'Archive this project?' : 'Delete this project?', canonical ? 'This hides “' + project.title + '” from the public site. A versioned archive record will preserve the data and prevent the CV fallback from restoring it.' : 'This permanently deletes “' + project.title + '” from Firestore. Export or copy any details you need first.', canonical ? 'Archive project' : 'Delete project')) return;
+    remove.disabled = true;
+    try {
+      if (canonical) {
+        const { id, ...currentContent } = C.normalizeProject(project);
+        await db.collection('projects').doc(project.docId).set({ ...currentContent, schemaVersion: 2, canonicalId: project.canonicalId, archived: true }, { merge: true });
       }
-
-      loadedSubscribers.push({ email: email, subscribedAt: timestampText });
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td style="font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--accent-tertiary);">${email}</td>
-        <td style="text-align: right; color: var(--text-secondary); font-size: 0.8rem;">${timestampText}</td>
-      `;
-      subscribersTableBody.appendChild(tr);
-    });
-  } catch (error) {
-    console.error("Error loading subscribers CRM: ", error);
-  }
-}
-
-// Export Subscribers List as JSON file download
-exportSubscribersBtn.addEventListener('click', () => {
-  if (loadedSubscribers.length === 0) {
-    Swal.fire('Export Failed', 'No subscriber data available for export.', 'info');
-    return;
-  }
-
-  const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(loadedSubscribers, null, 2))}`;
-  const downloadAnchor = document.createElement('a');
-  downloadAnchor.setAttribute("href", jsonString);
-  downloadAnchor.setAttribute("download", `CRM_Export_${new Date().toISOString().slice(0,10)}.json`);
-  document.body.appendChild(downloadAnchor);
-  downloadAnchor.click();
-  downloadAnchor.remove();
-  
-  Toast.fire({ icon: 'success', title: 'Database Exported Successfully' });
-});
-
-// ===== AUTO FILL UTILITY (Temporary helper for initial setup) =====
-const autoFillBtn = document.getElementById('autoFillBtn');
-if (autoFillBtn) {
-  autoFillBtn.addEventListener('click', async () => {
-    if (!isFirebaseEnabled || !db) return;
-    
-    const result = await Swal.fire({
-      title: 'Auto-Fill Database?',
-      text: 'This will automatically push all your projects, skills, and stats from the code to Firebase. It may duplicate entries if you already added them.',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, Fill Data!',
-      cancelButtonText: 'Cancel'
-    });
-
-    if (result.isConfirmed) {
-      Swal.fire({ title: 'Filling Database...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-      
-      try {
-        // 1. Stats
-        await db.collection("stats").doc("summary").set({
-          gpa: "3.94", rank: "3rd", projectsCount: 6
-        });
-
-        // 2. Skills
-        await db.collection("skills").doc("languages").set({ category: "languages", list: ["C", "C++", "Python", "JavaScript", "HTML", "CSS", "SQL", "Verilog", "ARM Assembly"] });
-        await db.collection("skills").doc("tools").set({ category: "tools", list: ["VS Code", "Git", "GitHub", "Keil µVision", "ModelSim", "AutoCAD", "Power BI"] });
-        await db.collection("skills").doc("soft").set({ category: "soft", list: ["Leadership", "Adaptability", "Teamwork", "Communication", "Problem Solving", "Arabic (Native)", "English (Very Good)"] });
-
-        // 3. Projects
-        const projects = [
-          {
-            title: "Smart Nurse Robot",
-            description: "Fully autonomous medical assistant robot using bare-metal ARM Thumb-2 Assembly on STM32 without HAL libraries. Integrated I2C, SPI, UART, ADC, PWM, Bluetooth, RFID, and ultrasonic navigation. Real-time monitoring of Heart Rate, SpO2, IV drop-rate, and pressure sensing with a custom TFT dashboard.",
-            category: "embedded", year: "2026", icon: "cpu", repoLink: "https://github.com/fady111-f", tags: ["ARM Assembly", "STM32", "I2C / SPI", "Bluetooth", "RFID"]
-          },
-          {
-            title: "Flowchart Designer & Simulator",
-            description: "Complete flowchart designer and simulator in C++ without UI frameworks. Implemented copy/paste, undo/redo, validation, and automated C++ code generation features for visual algorithm design.",
-            category: "software", year: "2025", icon: "pen-tool", repoLink: "https://github.com/fady111-f", tags: ["C++", "Graphics", "Code Gen"]
-          },
-          {
-            title: "Restaurant Management System",
-            description: "Restaurant order management simulation system for dine-in, takeaway, and delivery orders. Features dynamic assignment algorithms for chefs, tables, and delivery scooters.",
-            category: "software", year: "2026", icon: "coffee", repoLink: "https://github.com/fady111-f", tags: ["C++", "Algorithms", "Simulation"]
-          },
-          {
-            title: "FPGA ALU Logic Design",
-            description: "Designed and implemented an Arithmetic Logic Unit (ALU) using Verilog. Supported arithmetic operations, BCD-to-excess-3 conversion, and FPGA-based sequential logic. Simulated and verified on a DE1-SoC FPGA board using ModelSim.",
-            category: "embedded", year: "2025", icon: "zap", repoLink: "", tags: ["Verilog", "FPGA", "DE1-SoC", "ModelSim"]
-          },
-          {
-            title: "Innovative Lampshade Project",
-            description: "Led a team in designing and building a recyclable PVC-based decorative lampshade. Applied sustainable design principles using reused materials. Received 3rd place and was selected as a showcase model by the department head.",
-            category: "design", year: "2026", icon: "sun", repoLink: "", tags: ["Design", "Sustainability", "Leadership"]
-          },
-          {
-            title: "SDG 9 — Industry & Innovation",
-            description: "Led a team to research and present Sustainable Development Goal 9. Prepared presentation materials and coordinated public speaking tasks. Received excellent feedback for presentation quality and teamwork.",
-            category: "design", year: "2025", icon: "globe", repoLink: "", tags: ["Research", "Presentation", "SDG"]
-          }
-        ];
-
-        // First, optionally clear existing projects (optional, but safe to avoid duplicates if they click multiple times)
-        const snapshot = await db.collection("projects").get();
-        const batch = db.batch();
-        snapshot.docs.forEach((doc) => { batch.delete(doc.ref); });
-        await batch.commit();
-
-        for (let p of projects) {
-          await db.collection("projects").add(p);
-        }
-
-        // Reload data
-        loadStatsData();
-        loadSkillsData();
-        loadProjectsData();
-
-        Swal.fire('Success!', 'All your hardcoded data has been uploaded to Firebase automatically.', 'success');
-      } catch (error) {
-        console.error("Auto-Fill Error:", error);
-        Swal.fire('Error', 'Failed to upload data.', 'error');
-      }
-    }
+      else await db.collection('projects').doc(project.docId).delete();
+      await loadProjectsData();
+      $('inventoryStatus').textContent = project.title + (canonical ? ' archived.' : ' deleted.');
+      focusProjectControl();
+    } catch { remove.disabled = false; await notice('Project unchanged', 'The operation failed. Check connection and permissions.', 'error'); }
   });
-}
+  $('showArchived').addEventListener('change', () => { if (db) loadProjectsData(); });
+  function updateAdminTheme() {
+    const dark = document.documentElement.dataset.theme === 'dark';
+    $('adminTheme').textContent = dark ? 'Use light theme' : 'Use dark theme';
+    document.querySelector('meta[name="theme-color"]').content = dark ? '#1c2825' : '#eeeee7';
+  }
+  $('adminTheme').addEventListener('click', () => {
+    document.documentElement.classList.add('theme-switching');
+    document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('theme', document.documentElement.dataset.theme); } catch { /* Theme still works without storage. */ }
+    updateAdminTheme(); requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('theme-switching')));
+  });
+  updateAdminTheme();
+  $('projectForm').addEventListener('submit', event => {
+    event.preventDefault(); if (!cloudReady()) return;
+    const repo = $('projRepo').value.trim(), media = $('projMedia').value.trim();
+    if (repo && !C.repositoryURL(repo)) { notice('Repository URL needed', 'Use an HTTPS GitHub repository URL, not a profile or executable URL.', 'warning'); return; }
+    if (media && !C.safeURL(media)) { notice('Media URL invalid', 'Use an HTTPS URL without embedded credentials.', 'warning'); return; }
+    formAction(event.currentTarget, async () => {
+      const current = projects.get($('projectId').value);
+      const payload = { title: $('projTitle').value.trim(), description: $('projDesc').value.trim(), category: $('projCategory').value, year: $('projYear').value.trim(), icon: /^[a-z-]+$/.test($('projIcon').value) ? $('projIcon').value : 'folder', repoLink: repo, mediaLink: media, tags: C.list($('projTags').value.split(',')), schemaVersion: 2, archived: false };
+      if (current?.canonicalId) payload.canonicalId = current.canonicalId;
+      let savedId = current?.id;
+      if (current) await db.collection('projects').doc(current.docId).set(payload, { merge: true });
+      else { const saved = await db.collection('projects').add(payload); savedId = C.canonicalId(payload) || saved.id; }
+      $('projectFormContainer').classList.add('hide'); $('projectForm').reset(); await loadProjectsData(); await notice('Project saved', '', 'success');
+      $('inventoryStatus').textContent = payload.title + ' saved.'; focusProjectControl(savedId);
+    });
+  });
+  $('skillsForm').addEventListener('submit', event => {
+    event.preventDefault(); if (!cloudReady()) return;
+    formAction(event.currentTarget, async () => {
+      const batch = db.batch();
+      Object.entries(skillInputs).forEach(([category, id]) => batch.set(db.collection('skills').doc(category), { category, schemaVersion: 2, list: C.list($(id).value.split(',')) }, { merge: true }));
+      await batch.commit(); await notice('Skills saved', 'Updated all five categories.', 'success');
+    });
+  });
+  $('exportSubscribersBtn').addEventListener('click', () => {
+    if (!subscribers.length) { notice('Nothing to export', 'No subscriber records were loaded.'); return; }
+    const url = URL.createObjectURL(new Blob([JSON.stringify(subscribers, null, 2)], { type: 'application/json' }));
+    const anchor = node('a'); anchor.href = url; anchor.download = 'Subscribers_' + new Date().toISOString().slice(0, 10) + '.json'; document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  $('autoFillBtn').addEventListener('click', async () => {
+    if (seeding || !cloudReady()) return;
+    seeding = true; $('autoFillBtn').disabled = true;
+    try {
+      const [stats, skills, inventory] = await Promise.all([db.collection('stats').doc('summary').get(), db.collection('skills').get(), db.collection('projects').get()]);
+      const plan = C.planSeed({ statsExists: stats.exists, skillIds: skills.docs.map(doc => doc.id), projects: inventory.docs.map(doc => ({ ...doc.data(), id: doc.id })) });
+      const entries = [];
+      if (plan.stats) entries.push({ ref: db.collection('stats').doc('summary'), data: plan.stats });
+      plan.skills.forEach(item => entries.push({ ref: db.collection('skills').doc(item.category), data: item }));
+      plan.projects.forEach(item => { const { id, ...data } = item; entries.push({ ref: db.collection('projects').doc(id), data }); });
+      if (!entries.length) { await notice('Defaults already present', 'No records were added, replaced, or deleted.'); return; }
+      if (!await confirm('Add missing defaults?', 'Add ' + plan.projects.length + ' projects, ' + plan.skills.length + ' skill categories, and ' + (plan.stats ? '1 academic summary' : 'no academic summary') + '. Existing documents and matching legacy projects are left untouched. No records will be deleted or replaced.', 'Add missing defaults')) return;
+      const added = await db.runTransaction(async transaction => {
+        // Read every target before any writes, so concurrent owner edits are preserved.
+        const existing = await Promise.all(entries.map(item => transaction.get(item.ref)));
+        let count = 0;
+        entries.forEach((item, index) => { if (!existing[index].exists) { transaction.set(item.ref, item.data); count++; } });
+        return count;
+      });
+      await loadDashboard(); await notice('Missing defaults added', added + ' new records. Existing records were preserved.', 'success');
+    } catch { await notice('Defaults could not be added', 'The transaction failed. No partial transaction writes were committed. Check connection and permissions.', 'error'); }
+    finally { seeding = false; $('autoFillBtn').disabled = false; }
+  });
+  if (!C) { loginStatus.textContent = 'Shared content is missing. Check portfolio-content.js.'; return; }
+  displayAcademic(); Object.entries(skillInputs).forEach(([category, id]) => { $(id).value = C.skills[category].join(', '); });
+  try {
+    if (typeof firebaseConfig === 'undefined' || !window.firebase || !firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith('PLACEHOLDER')) throw new Error('Unavailable');
+    if (!window.firebase.apps.length) window.firebase.initializeApp(firebaseConfig);
+    db = window.firebase.firestore();
+    window.firebase.auth().onAuthStateChanged(user => {
+      $('loginWrapper').classList.toggle('hide', !!user); $('dashboardWrapper').classList.toggle('hide', !user);
+      if (user) loadDashboard();
+      else { projects.clear(); subscribers = []; $('adminPassword').value = ''; }
+    });
+  } catch { loginStatus.textContent = 'Firebase is unavailable. The dashboard requires a connection to its existing project.'; }
+})();

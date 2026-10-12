@@ -423,3 +423,128 @@ div:where(.swal2-container) button:where(.swal2-cancel) {
   .admin-main { margin-left: 0; padding: 20px; }
   .form-grid-2 { grid-template-columns: 1fr; }
 }
+
+/* Bring the existing dashboard into the workbench system without changing its flows. */
+.admin-page { --glass-border: var(--line); font-family: var(--font-body); }
+.admin-page .bg-glow { display: none; }
+.admin-page .admin-sidebar { background: var(--surface); backdrop-filter: none; }
+.admin-page .sidebar-header h2 { background: none; -webkit-text-fill-color: var(--ink); color: var(--ink); font-family: var(--font-display); }
+.admin-page .admin-tab-btn { border-radius: 3px; }
+.admin-page .admin-tab-btn.active { background: var(--soft); color: var(--accent); border-color: var(--line); box-shadow: none; }
+.admin-page .admin-tab-btn.active i { color: var(--accent); }
+.admin-page .admin-card { background: var(--surface); border-radius: 5px; box-shadow: var(--shadow-paper); backdrop-filter: none; }
+.admin-page .form-group input, .admin-page .form-group select, .admin-page .form-group textarea { background: var(--paper); border-color: var(--line); border-radius: 3px; }
+.admin-page .form-group input:focus, .admin-page .form-group select:focus, .admin-page .form-group textarea:focus { background: var(--surface); box-shadow: none; }
+.admin-page .data-table-wrapper { background: var(--surface); border-radius: 3px; }
+.admin-page .data-table th, .admin-page .data-table td { border-color: var(--line); }
+.admin-page .badge-edit { color: var(--accent); background: var(--soft); border-color: var(--line); }
+.admin-page .badge-delete { color: #a22e31; background: #f5e9e2; border-color: #d4aaa1; }
+.admin-page .admin-logout-btn { color: #a22e31; background: #f5e9e2; border-color: #d4aaa1; }
+.admin-page .action-badge { border-radius: 3px; min-height: 44px; }
+.admin-page .admin-panel-section { padding: 0; }
+.admin-page .admin-status { margin-top: 12px; font-size: .8rem; color: var(--secondary); }
+.admin-page .archive-control { display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: .85rem; margin-bottom: 20px; }
+.admin-page .archive-control input { width: 18px; height: 18px; padding: 0; accent-color: var(--accent); }
+.admin-page .section-topbar { flex-wrap: wrap; gap: 16px; }
+.admin-page .admin-login-wrapper { padding: 20px; overflow-y: auto; }
+.admin-page .admin-login-wrapper .admin-card { padding: 30px; }
+.admin-page #autoFillBtn { background: var(--accent) !important; color: var(--accent-ink); min-height: 44px; }
+.admin-page div:where(.swal2-container) div:where(.swal2-popup) { background: var(--surface); color: var(--ink); backdrop-filter: none; border-radius: 5px; }
+.admin-page div:where(.swal2-container) button:where(.swal2-confirm) { background: var(--accent) !important; color: var(--accent-ink); }
+.admin-page div:where(.swal2-container) button:where(.swal2-cancel) { background: var(--soft) !important; color: var(--ink) !important; }
+.admin-page .skeleton-row td { color: var(--secondary) !important; }
+.admin-page .skeleton-row td::after { display: none; }
+@media (max-width: 600px) {
+  .admin-page .admin-card { padding: 22px; }
+  .admin-page .section-topbar h1 { font-size: 1.5rem; }
+  .admin-page .data-table:has(#projectsTableBody) { display: block; }
+  .admin-page .data-table:has(#projectsTableBody) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .admin-page #projectsTableBody { display: block; }
+  .admin-page #projectsTableBody tr { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding: 12px 0; }
+  .admin-page #projectsTableBody tr:last-child { border-bottom: 0; }
+  .admin-page #projectsTableBody td { display: block; padding: 5px 16px; border: 0; overflow-wrap: anywhere; }
+  .admin-page #projectsTableBody td:first-child { display: none; }
+  .admin-page #projectsTableBody td:nth-child(2) { width: 100%; font-size: 1rem; font-weight: 600; }
+  .admin-page #projectsTableBody td:nth-child(3), .admin-page #projectsTableBody td:nth-child(4) { font-size: .78rem; color: var(--secondary); }
+  .admin-page #projectsTableBody td:last-child { display: flex; gap: 12px; width: 100%; margin-top: 6px; }
+}
+
+/* Dedicated narrow-screen inventory: not a restyled desktop table. */
+.admin-page { --admin-sidebar-width: 228px; }
+.admin-page .admin-sidebar { padding-block: 24px; }
+.admin-page .sidebar-header { padding: 0 20px 20px; margin-bottom: 19px; }
+.admin-page .sidebar-header h2 { font-size: 1.35rem; }
+.admin-page .sidebar-header p { font-size: .78rem; }
+.admin-site-link { display: inline-flex; align-items: center; min-height: 44px; font-size: .85rem; margin-top: 5px; }
+.admin-page .sidebar-menu { padding-inline: 13px; }
+.admin-page .admin-tab-btn { min-height: 48px; padding: 12px; font-size: .9rem; }
+.admin-maintenance { margin: 26px 20px; border-top: 1px solid var(--line); padding-top: 12px; }
+.admin-maintenance summary { cursor: pointer; font-size: .85rem; min-height: 44px; padding-block: 10px; }
+.admin-maintenance p { font-size: .8rem; color: var(--secondary); margin: 10px 0 15px; }
+.admin-page #autoFillBtn { background: transparent !important; color: var(--ink); border: 1px solid var(--line); box-shadow: none; border-radius: 3px; font-size: .78rem; width: 100%; padding: 10px; }
+.admin-theme { width: 100%; min-height: 44px; background: none; border: 1px solid var(--line); font-size: .83rem; border-radius: 3px; margin-bottom: 10px; }
+.admin-page .admin-logout-btn { border-radius: 3px; background: none; border-color: var(--line); color: var(--ink); font-size: .85rem; min-height: 44px; }
+.admin-page .admin-main { padding: 30px; min-width: 0; }
+.admin-page .section-topbar h1 { font-size: 1.9rem; letter-spacing: -.025em; }
+.admin-page .form-group label { font-size: .87rem; text-transform: none; letter-spacing: 0; }
+.admin-page .data-table { table-layout: fixed; }
+.admin-page .data-table th, .admin-page .data-table td { padding: 15px 12px; overflow-wrap: anywhere; }
+.admin-page .data-table th { font-size: .81rem; }
+.project-inventory .data-table th:first-child { width: 31%; }
+.project-inventory .data-table th:nth-child(2) { width: 12%; }
+.project-inventory .data-table th:nth-child(3) { width: 9%; }
+.project-inventory .data-table th:nth-child(4) { width: 21%; }
+.project-inventory .data-table th:last-child { width: 27%; }
+.inventory-title { font-weight: 600; }
+.record-kind, .record-status { display: block; font-size: .81rem; line-height: 1.5; }
+.record-kind { color: var(--secondary); }
+.record-status { margin-top: 3px; font-weight: 500; }
+.inventory-help { font-size: .87rem; color: var(--secondary); margin: -10px 0 21px; }
+.project-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.admin-page .project-actions .action-badge { font-size: .8rem; min-height: 44px; padding: 8px 12px; font-weight: 500; }
+.project-records { display: none; list-style: none; padding: 0; }
+.project-record { padding: 18px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 3px; }
+.project-record h3 { font-family: var(--font-body); font-size: 1.04rem; letter-spacing: -.01em; line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
+.record-meta { font-size: .86rem; color: var(--secondary); margin-top: 3px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.record-state { display: flex; flex-wrap: wrap; gap: 10px; margin: 7px 0 11px; }
+.record-state .record-kind, .record-state .record-status { font-size: .81rem; display: inline; margin: 0; }
+.record-state .record-status::before { content: '·'; padding-right: 10px; }
+.inventory-empty { padding: 22px; color: var(--secondary); background: var(--surface); border: 1px solid var(--line); font-size: .9rem; }
+.admin-page #inventoryStatus:empty { display: none; }
+.admin-page #inventoryStatus { margin: 0 0 14px; }
+@media (max-width: 1100px) { .admin-page .admin-main { padding: 25px; } .admin-page .data-table th, .admin-page .data-table td { padding-inline: 9px; } .admin-page .project-actions .action-badge { padding-inline: 10px; } }
+@media (max-width: 900px) {
+  .admin-page .admin-sidebar { display: grid; grid-template-columns: 1fr auto; gap: 14px 20px; padding: 20px; }
+  .admin-page .sidebar-header { padding: 0; margin: 0; border: 0; }
+  .admin-page .sidebar-header p { display: none; }
+  .admin-site-link { margin-top: 0; min-height: 36px; }
+  .admin-page .sidebar-menu { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; gap: 8px; padding: 0; }
+  .admin-page .sidebar-menu li { flex: 1 1 150px; }
+  .admin-page .admin-tab-btn { padding: 10px 12px; font-size: .89rem; justify-content: center; }
+  .admin-maintenance { grid-column: 1 / -1; margin: 0; padding-top: 0; border: 0; }
+  .admin-maintenance summary { width: fit-content; font-size: .8rem; min-height: 44px; }
+  .admin-maintenance p { max-width: 530px; }
+  .admin-page #autoFillBtn { max-width: 270px; }
+  .admin-page .sidebar-footer { grid-column: 2; grid-row: 1; display: flex; gap: 8px; padding: 0; align-self: start; }
+  .admin-theme { width: auto; margin: 0; padding: 8px 12px; }
+  .admin-page .admin-logout-btn { width: auto; padding: 9px 12px; }
+  .admin-page .admin-main { margin-left: 0; padding: 24px 20px; }
+  .project-inventory > .data-table-wrapper { display: none; }
+  .project-records { display: grid; gap: 12px; }
+}
+@media (max-width: 600px) {
+  .admin-page .admin-sidebar { grid-template-columns: 1fr; padding: 16px 20px; gap: 8px; }
+  .admin-page .sidebar-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .admin-page .sidebar-header h2 { font-size: 1.25rem; }
+  .admin-page .sidebar-footer { grid-column: 1; grid-row: auto; justify-content: end; }
+  .admin-page .sidebar-menu { gap: 7px; }
+  .admin-page .sidebar-menu li { flex-basis: 43%; }
+  .admin-page .admin-tab-btn { font-size: .86rem; min-height: 44px; }
+  .admin-maintenance { grid-row: 4; }
+  .admin-page .admin-main { padding: 23px 20px; }
+  .admin-page .section-topbar { align-items: center; margin-bottom: 20px; }
+  .admin-page .section-topbar h1 { font-size: 1.55rem; }
+  .admin-page #addProjectBtn { min-height: 44px; padding: 9px 13px; font-size: .84rem; }
+  .project-record { padding: 16px; }
+  .admin-page .record-status { font-size: .82rem; }
+}

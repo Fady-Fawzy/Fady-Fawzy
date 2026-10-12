@@ -4,10 +4,11 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#eeeee7">
   <meta name="robots" content="noindex, nofollow">
   <meta name="description" content="Administrative dashboard for managing Fady Fawzy portfolio content.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <title>Admin Dashboard — Premium Control Panel</title>
+  <title>Fady's workbench — Content administration</title>
   
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -18,11 +19,12 @@
   
   <!-- Premium Admin Specific Styles -->
   <link rel="stylesheet" href="admin.css" />
+  <script src="theme-init.js"></script>
   
   <!-- SweetAlert2 CSS Override via cdn -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 </head>
-<body class="touch-device">
+<body class="touch-device admin-page">
 
   <!-- Ambient Background -->
   <div class="bg-glow">
@@ -39,7 +41,7 @@
       <div style="text-align: center; margin-bottom: 32px;">
         <i data-feather="lock" style="width: 48px; height: 48px; color: var(--accent-primary); margin-bottom: 16px;"></i>
         <h2 style="font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 800; margin: 0;">Admin Login</h2>
-        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 8px;">Secure Portfolio Access</p>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 8px;">Sign in to manage portfolio content</p>
       </div>
       
       <form id="loginForm">
@@ -64,39 +66,39 @@
     <!-- Sidebar Navigation -->
     <aside class="admin-sidebar">
       <div class="sidebar-header">
-        <h2>Dashboard</h2>
-        <p>Live Sync Mode</p>
-        <button id="autoFillBtn" class="btn-primary-custom" style="margin-top: 16px; background: linear-gradient(135deg, #10b981, #059669); font-size: 0.75rem; padding: 8px; width: 100%; justify-content: center;">
-          <i data-feather="database" style="width: 14px; height: 14px;"></i> Auto-Fill Database
-        </button>
+        <h2>Portfolio admin</h2>
+        <p>Portfolio content</p>
+        <a href="index.html" class="admin-site-link" target="_blank" rel="noopener noreferrer">View portfolio ↗</a>
       </div>
       
       <ul class="sidebar-menu">
         <li>
-          <button class="admin-tab-btn active" data-tab="stats">
+          <button class="admin-tab-btn active" data-tab="projects" aria-controls="tab-projects" aria-pressed="true">
+            <i data-feather="folder"></i> Projects
+          </button>
+        </li>
+        <li>
+          <button class="admin-tab-btn" data-tab="stats" aria-controls="tab-stats" aria-pressed="false">
             <i data-feather="bar-chart-2"></i> Statistics
           </button>
         </li>
         <li>
-          <button class="admin-tab-btn" data-tab="projects">
-            <i data-feather="folder"></i> Projects Inventory
-          </button>
-        </li>
-        <li>
           <button class="admin-tab-btn" data-tab="skills">
-            <i data-feather="cpu"></i> Skills Arsenal
+            <i data-feather="cpu"></i> Skills
           </button>
         </li>
         <li>
           <button class="admin-tab-btn" data-tab="subscribers">
-            <i data-feather="users"></i> CRM Subscribers
+            <i data-feather="users"></i> Subscribers
           </button>
         </li>
       </ul>
+      <details class="admin-maintenance" id="adminMaintenance"><summary>Setup & defaults</summary><p>Add only missing records. Existing content stays untouched; repeat runs do not duplicate defaults.</p><button id="autoFillBtn" class="btn-outline-custom" type="button">Add Missing Defaults</button></details>
       
       <div class="sidebar-footer">
+        <button id="adminTheme" class="admin-theme" type="button">Switch theme</button>
         <button class="admin-logout-btn" id="logoutBtn">
-          <i data-feather="log-out"></i> Lock Console
+          <i data-feather="log-out"></i> Sign out
         </button>
       </div>
     </aside>
@@ -105,26 +107,31 @@
     <main class="admin-main">
       
       <!-- 1. STATS PANEL -->
-      <section class="admin-panel-section active" id="tab-stats">
+      <section class="admin-panel-section" id="tab-stats">
         <div class="section-topbar">
-          <h1><i data-feather="bar-chart-2" style="width: 28px; height: 28px;"></i> Performance Metrics</h1>
+          <h1><i data-feather="bar-chart-2" style="width: 28px; height: 28px;"></i> Academic records</h1>
         </div>
         
         <div class="admin-card">
           <form id="statsForm">
             <div class="form-grid-2">
               <div class="form-group">
-                <label for="statGPA">Accumulated GPA</label>
-                <input type="text" id="statGPA" placeholder="3.94" required />
+                <label for="statGPA">Computer Engineering Department GPA</label>
+                <input type="number" min="0" max="4" step="0.01" id="statGPA" placeholder="3.88" required />
               </div>
               <div class="form-group">
-                <label for="statRank">Class Rank Badge</label>
-                <input type="text" id="statRank" placeholder="3rd" required />
+                <label for="statRank">Computer Engineering Department Rank</label>
+                <input type="text" id="statRank" placeholder="1st" pattern="[1-9][0-9]*(st|nd|rd|th)" required />
               </div>
             </div>
+            <div class="form-grid-2" style="margin-top: 24px;">
+              <div class="form-group"><label for="statPrepGPA">Preparatory Engineering Year GPA</label><input type="number" min="0" max="4" step="0.01" id="statPrepGPA" placeholder="3.94" required /></div>
+              <div class="form-group"><label for="statPrepRank">Preparatory Engineering Year Rank</label><input type="text" id="statPrepRank" placeholder="3rd" pattern="[1-9][0-9]*(st|nd|rd|th)" required /></div>
+            </div>
             <div class="form-group" style="margin-top: 24px; margin-bottom: 32px;">
-              <label for="statCount">Total Finished Projects</label>
-              <input type="number" id="statCount" placeholder="6" required />
+              <label for="statCount">Displayed Projects (calculated automatically)</label>
+              <input type="number" id="statCount" readonly />
+              <p id="statsStatus" class="admin-status" role="status"></p>
             </div>
             <button type="submit" class="btn-primary-custom" style="padding: 12px 24px;">
               <span><i data-feather="save" style="margin-right: 8px;"></i> Update Statistics</span>
@@ -134,7 +141,7 @@
       </section>
 
       <!-- 2. PROJECTS PANEL -->
-      <section class="admin-panel-section" id="tab-projects">
+      <section class="admin-panel-section active" id="tab-projects">
         <div class="section-topbar">
           <h1><i data-feather="folder" style="width: 28px; height: 28px;"></i> Project Registry</h1>
           <button class="btn-primary-custom" id="addProjectBtn">
@@ -142,6 +149,8 @@
           </button>
         </div>
 
+        <label class="archive-control"><input type="checkbox" id="showArchived"> Show archived projects</label>
+        <p class="inventory-help">Default projects can be archived and restored. Custom projects can be deleted.</p>
         <!-- Add/Edit Project Form -->
         <div class="admin-card hide" id="projectFormContainer" style="border: 1px solid var(--accent-primary);">
           <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.4rem; margin-bottom: 24px;" id="projectFormTitle">Add New Project</h2>
@@ -159,6 +168,7 @@
               <div class="form-group">
                 <label for="projCategory">Category</label>
                 <select id="projCategory" required>
+                  <option value="ai" style="background: var(--bg-primary);">AI/Data</option>
                   <option value="embedded" style="background: var(--bg-primary);">Embedded/Hardware</option>
                   <option value="software" style="background: var(--bg-primary);">Software/C++</option>
                   <option value="design" style="background: var(--bg-primary);">Design/Research</option>
@@ -166,7 +176,7 @@
               </div>
               <div class="form-group">
                 <label for="projYear">Year</label>
-                <input type="text" id="projYear" placeholder="2026" required />
+                <input type="text" id="projYear" placeholder="2026" pattern="[0-9]{4}" required />
               </div>
             </div>
             <div class="form-grid-2" style="margin-bottom: 24px;">
@@ -177,9 +187,10 @@
               </div>
               <div class="form-group">
                 <label for="projRepo">GitHub URL (Optional)</label>
-                <input type="url" id="projRepo" placeholder="https://github.com/..." />
+                <input type="url" id="projRepo" placeholder="https://github.com/owner/repository" />
               </div>
             </div>
+            <div class="form-group" style="margin-bottom: 24px;"><label for="projMedia">Project Media URL (Optional)</label><input type="url" id="projMedia" placeholder="https://..." /></div>
             <div class="form-group" style="margin-bottom: 32px;">
               <label for="projTags">Tags (Comma Separated)</label>
               <input type="text" id="projTags" placeholder="STM32, I2C, Python" required />
@@ -194,15 +205,16 @@
         </div>
 
         <!-- Data Grid -->
-        <div class="admin-card" style="padding: 0; overflow: hidden;">
+        <div id="projectInventory" class="project-inventory">
+          <p id="inventoryStatus" class="admin-status" role="status" aria-live="polite"></p>
           <div class="data-table-wrapper">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width: 60px;">Icon</th>
                   <th>Title</th>
                   <th>Category</th>
                   <th>Year</th>
+                  <th>Record / status</th>
                   <th style="text-align: right;">Actions</th>
                 </tr>
               </thead>
@@ -217,13 +229,14 @@
               </tbody>
             </table>
           </div>
+          <ul id="projectRecords" class="project-records" aria-label="Project inventory"></ul>
         </div>
       </section>
 
       <!-- 3. SKILLS PANEL -->
       <section class="admin-panel-section" id="tab-skills">
         <div class="section-topbar">
-          <h1><i data-feather="cpu" style="width: 28px; height: 28px;"></i> Technical Arsenal</h1>
+          <h1><i data-feather="cpu" style="width: 28px; height: 28px;"></i> Technical Skills</h1>
         </div>
 
         <div class="admin-card">
@@ -232,6 +245,8 @@
               <label for="skillsLanguages">Programming Languages</label>
               <textarea id="skillsLanguages" style="min-height: 80px;" placeholder="C, C++, Python..." required></textarea>
             </div>
+            <div class="form-group" style="margin-bottom: 28px;"><label for="skillsData">AI & Data</label><textarea id="skillsData" rows="3" required></textarea></div>
+            <div class="form-group" style="margin-bottom: 28px;"><label for="skillsEmbedded">Backend & Embedded</label><textarea id="skillsEmbedded" rows="3" required></textarea></div>
             <div class="form-group" style="margin-bottom: 28px;">
               <label for="skillsTools">Tools & Platforms</label>
               <textarea id="skillsTools" style="min-height: 80px;" placeholder="VS Code, Git..." required></textarea>
@@ -241,7 +256,7 @@
               <textarea id="skillsSoft" style="min-height: 80px;" placeholder="Leadership, Teamwork..." required></textarea>
             </div>
             <button type="submit" class="btn-primary-custom" style="padding: 12px 24px;">
-              <span><i data-feather="save" style="margin-right: 8px;"></i> Save Arsenal</span>
+              <span><i data-feather="save" style="margin-right: 8px;"></i> Save Skills</span>
             </button>
           </form>
         </div>
@@ -250,7 +265,7 @@
       <!-- 4. SUBSCRIBERS PANEL -->
       <section class="admin-panel-section" id="tab-subscribers">
         <div class="section-topbar">
-          <h1><i data-feather="users" style="width: 28px; height: 28px;"></i> Newsletter CRM</h1>
+          <h1><i data-feather="users" style="width: 28px; height: 28px;"></i> Newsletter Subscribers</h1>
           <button class="btn-outline-custom" id="exportSubscribersBtn">
             <i data-feather="download" style="margin-right: 6px;"></i> Export JSON
           </button>
@@ -288,11 +303,12 @@
   
   <script>
     // Initialize Feather Icons early
-    feather.replace();
+    if (typeof feather !== 'undefined') feather.replace();
   </script>
   
   <!-- Core Logic -->
   <script src="firebase-config.js"></script>
+  <script src="portfolio-content.js"></script>
   <script src="admin.js"></script>
 </body>
 </html>

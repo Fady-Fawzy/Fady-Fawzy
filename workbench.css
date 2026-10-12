@@ -1,0 +1,296 @@
+/* Public art direction: a signal study, oversized type, and individual project spreads.
+   Scoped to .portfolio so the shared admin interface keeps its existing design. */
+.portfolio {
+  --paper: #edf0eb; --surface: #f7f8f4; --ink: #223a32;
+  --secondary: #52665e; --line: #bdc9be; --soft: #dfe6dc;
+  --signal: #a5482e; --signal-wash: #aec8b1; --container-max: 1280px;
+}
+html[data-theme='dark'] .portfolio {
+  --paper: #1c2825; --surface: #26332e; --ink: #efefe4;
+  --secondary: #b6c1b5; --line: #4a5b4e; --soft: #2d3f34;
+  --signal: #efab88; --signal-wash: #53715d;
+}
+.portfolio .navbar { background: var(--paper); }
+.portfolio .nav-inner { min-height: 76px; }
+.portfolio .nav-links a { position: relative; font-size: .81rem; }
+.portfolio .nav-links a::after { content: ''; position: absolute; inset: auto 0 6px; height: 2px; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform 180ms ease; }
+.portfolio .nav-links a:hover::after, .portfolio .nav-links a[aria-current]::after { transform: scaleX(1); }
+.portfolio .nav-links a:hover, .portfolio .nav-links a[aria-current] { text-decoration: none; }
+.portfolio .hero { padding-top: 30px; }
+.portfolio .hero-topline { align-items: baseline; }
+.portfolio .hero-topline .eyebrow, .portfolio .hero-topline .utility { font-size: .75rem; }
+.hero-nameplate { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 28px 0 25px; }
+.portfolio .hero h1 { font-size: clamp(5rem, 12.1vw, 11.4rem); font-weight: 800; letter-spacing: -.075em; line-height: .98; white-space: nowrap; }
+.portfolio .name-last { margin: 0 0 0 .13em; }
+.portfolio .name-period { color: var(--signal); }
+.nameplate-note { width: 140px; flex-shrink: 0; padding-top: 20px; }
+.nameplate-note .handwritten { display: block; transform: rotate(-7deg); font-size: 1.7rem; }
+.nameplate-note svg { width: 75px; height: 60px; margin: 8px 0 0 5px; fill: none; stroke: var(--accent); stroke-width: 1.5; }
+.portfolio .hero-layout { grid-template-columns: .85fr 1.15fr; gap: 74px; padding: 20px 0 42px; align-items: center; }
+.portfolio .hero-copy { padding: 0; }
+.portfolio .hero-role { border: 0; padding: 0; margin: 0; max-width: 370px; font-size: 1.06rem; font-weight: 600; }
+.portfolio .role-prefix { margin-bottom: 10px; font-size: .72rem; letter-spacing: .07em; }
+.portfolio .hero-thesis { margin-top: 23px; font-size: clamp(2.1rem, 3.35vw, 3rem); line-height: 1.09; letter-spacing: -.055em; }
+.portfolio .hero-thesis em::after { border-color: var(--signal); bottom: -7px; transform: rotate(-2deg); }
+.portfolio .hero-description { max-width: 400px; margin-top: 25px; font-size: .97rem; line-height: 1.8; }
+.portfolio .hero-actions { margin-top: 27px; gap: 25px; }
+.portfolio .button { border-radius: 2px; }
+.portfolio .button-primary { padding: 14px 20px; }
+.portfolio .hero-bottom { padding-block: 18px; font-size: .76rem; }
+.signal-study { min-width: 0; position: relative; }
+.signal-top { display: flex; align-items: center; justify-content: space-between; gap: 15px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.signal-top .utility { font-size: .75rem; }
+.signal-controls { display: flex; gap: 3px; }
+.signal-controls button { border: 1px solid transparent; background: none; font-family: var(--font-mono); font-size: .75rem; min-height: 44px; padding: 9px 13px; border-radius: 24px; transition: background 180ms, color 180ms; }
+.signal-controls button:hover { background: var(--soft); }
+.signal-controls button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+.signal-stage { position: relative; min-height: 270px; display: grid; align-items: center; }
+.signal-plot { width: 100%; height: auto; overflow: visible; }
+.plot-grid { stroke: var(--line); stroke-width: .6; fill: none; }
+.plot-labels { fill: var(--secondary); font: 10px var(--font-mono); }
+.signal-point { transition: fill 400ms, stroke 400ms, opacity 400ms; }
+.point-a { fill: var(--accent); stroke: var(--accent); stroke-width: 1; }
+.point-b { fill: none; stroke: var(--signal); stroke-width: 2.5; stroke-linecap: round; }
+.model-boundary { pointer-events: none; transition: opacity 300ms ease; }
+.boundary-wash { fill: var(--signal-wash); opacity: .24; }
+.boundary-line { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 6; fill: none; }
+.model-boundary ellipse { fill: none; stroke: var(--signal); stroke-width: 1.5; }
+.signal-scribble { position: absolute; right: 16%; bottom: 34px; font-size: 1.65rem; transform: rotate(-8deg); pointer-events: none; }
+.signal-study[data-view='data'] .model-boundary { opacity: 0; }
+.signal-study[data-view='data'] .signal-point { fill: var(--secondary); stroke: var(--secondary); opacity: .6; }
+.signal-study[data-view='data'] .point-b { fill: none; }
+.signal-study[data-view='data'] .signal-scribble { opacity: 0; }
+.signal-study[data-view='api'] .signal-plot, .signal-study[data-view='api'] .signal-scribble { visibility: hidden; }
+.signal-api { position: absolute; inset: 0; display: none; grid-template-columns: 1fr 30px 1.3fr 30px 1fr; align-items: center; gap: 10px; }
+.signal-study[data-view='api'] .signal-api { display: grid; }
+.api-profile, .api-output { display: flex; flex-direction: column; gap: 10px; }
+.api-profile strong, .api-output strong { font-size: .9rem; font-weight: 500; line-height: 1.5; }
+.api-model { border: 1px solid var(--accent); background: var(--soft); padding: 18px 10px; display: grid; justify-items: center; gap: 10px; text-align: center; }
+.api-model svg { width: 70px; height: 70px; stroke: var(--accent); stroke-width: 1.5; fill: none; }
+.api-model strong { font-family: var(--font-display); font-size: 1.05rem; }
+.api-model .utility { font-size: .65rem; }
+.api-lines { height: 39px; width: 60px; background: repeating-linear-gradient(to bottom, var(--line) 0 2px, transparent 2px 12px); }
+.api-connector { color: var(--accent); font-size: 1.5rem; }
+.api-result { font-family: var(--font-display); font-size: 2rem; color: var(--signal); }
+.signal-caption { font-size: .68rem; text-align: right; margin-top: -4px; }
+.signal-foot { display: grid; grid-template-columns: 1.2fr 1fr; align-items: start; gap: 24px; border-top: 1px solid var(--line); padding-top: 16px; margin-top: 14px; }
+.signal-foot p { color: var(--secondary); font-size: .82rem; line-height: 1.6; min-height: 4.8em; }
+.signal-foot a { display: flex; gap: 15px; justify-content: space-between; align-items: start; font-size: .8rem; min-height: 44px; line-height: 1.5; }
+.evidence-desk { display: grid; grid-template-columns: 220px 1fr; gap: 44px; padding-block: 40px 49px; }
+.evidence-margin .handwritten { margin-top: 17px; font-size: 1.6rem; transform: rotate(-5deg); }
+.portfolio .evidence-desk .tool-tracer { margin: 0; min-width: 0; }
+.portfolio .evidence-desk h2 { font-size: 1.35rem; }
+.portfolio .evidence-desk .evidence-controls { margin-block: 12px 18px; }
+.portfolio .evidence-desk .trail-button { font-size: .75rem; border-radius: 2px; border: 1px solid var(--line); padding-inline: 16px; }
+.portfolio .evidence-desk .trail-button[aria-pressed='true'] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.portfolio .evidence-desk .trail-summary { font-size: .82rem; }
+.portfolio .evidence-desk .trail-links { border-left: 0; border-top: 1px solid var(--line); padding: 16px 0 0; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 22px; }
+.portfolio .evidence-desk .trail-links li { padding: 0; }
+.portfolio .evidence-desk .trail-links li::before { display: none; }
+.portfolio .evidence-desk .trail-evidence-link { font-size: .86rem; padding-top: 0; }
+.portfolio .evidence-desk .trail-kind { display: block; color: var(--accent); font-size: .7rem; margin-bottom: 6px; }
+.portfolio .evidence-desk .trail-detail { font-size: .75rem; }
+.portfolio .projects-section { padding-block: 78px 88px; }
+.portfolio .section-heading h2 { font-size: clamp(2.4rem,4.9vw,4.25rem); letter-spacing: -.055em; line-height: 1.04; }
+.portfolio .section-heading { margin-bottom: 42px; }
+.portfolio .section-aside { max-width: 330px; font-size: .88rem; }
+.portfolio .project-toolbar { margin-bottom: 38px; padding-block: 9px; }
+.portfolio .project-list { gap: 48px 30px; }
+.portfolio .churn-project { padding: 40px; background: #234c40; border-color: #234c40; position: relative; }
+.portfolio .churn-project[data-evidence-match] { border-left: 4px solid var(--highlight); padding-left: 37px; }
+.portfolio .churn-project h3 { font-size: clamp(2rem,3.8vw,3.2rem); max-width: 430px; line-height: 1.04; text-decoration: none; }
+.portfolio .churn-spread { grid-template-columns: .95fr 1.05fr; gap: 64px; align-items: center; }
+.portfolio .churn-project .project-kicker { margin-bottom: 33px; }
+.portfolio .churn-metrics { gap: 40px; padding-top: 22px; border-top: 1px solid #6c8c7e; }
+.portfolio .churn-metrics strong { font-size: 3.2rem; }
+.portfolio .pipeline-sheet { transform: rotate(1deg); box-shadow: 8px 8px 0 #133b2e; }
+.portfolio .nurse-project { padding: 14px 0 44px; }
+.portfolio .nurse-spread { grid-template-columns: .9fr 1.1fr; gap: 75px; }
+.portfolio .robot-schematic { padding: 36px; border: 0; background-color: var(--soft); background-size: 25px 25px; }
+.portfolio .robot-schematic .mcu-block { padding: 22px 10px; }
+.portfolio .robot-schematic .mcu-block strong { font-size: 3rem; }
+.portfolio .nurse-project h3 { font-size: clamp(2rem,3.8vw,3.2rem); }
+.portfolio .software-project { border: 0; padding: 0 0 25px; background: none; border-bottom: 1px solid var(--line); }
+.portfolio .software-art { height: 180px; margin-bottom: 25px; background: var(--soft); padding-inline: 25px; }
+.portfolio [data-project='restaurant'] .software-art { background: var(--paper); border: 1px solid var(--line); }
+.portfolio .software-project .project-kicker { order: -1; }
+.portfolio .software-project h3 { font-size: 2rem; }
+.portfolio .flow-node { padding: 14px 17px; border-radius: 3px; }
+.portfolio .flow-decision { transform: rotate(-5deg); background: var(--highlight); color: #223a32; }
+.portfolio .queue-art { gap: 16px; }
+.portfolio .queue-slot { height: 20px; }
+.portfolio .project-entry { gap: 32px; padding-top: 30px; }
+.portfolio .entry-symbol { border: 0; background: var(--soft); transform: rotate(-5deg); }
+.portfolio .about-section { grid-template-columns: .65fr 1.35fr; gap: 105px; padding-block: 100px; }
+.about-portrait { margin-top: 38px; padding: 12px 12px 6px; border: 1px solid var(--line); background: var(--surface); transform: rotate(-4deg); max-width: 260px; box-shadow: var(--shadow-paper); }
+.about-portrait img { width: 100%; aspect-ratio: 1; height: auto; object-fit: cover; filter: saturate(.75); }
+.about-portrait figcaption { margin: 13px 0; text-align: center; font-size: 1.7rem; }
+.portfolio .about-margin .note-arrow { margin-top: 27px; margin-left: 150px; transform: rotate(-15deg); }
+.portfolio .about-body h2 { font-size: clamp(2rem,3.7vw,3.15rem); }
+.portfolio .about-body > .about-lead { font-size: 1.2rem; line-height: 1.75; }
+.portfolio .education-section { background: var(--soft); border: 0; padding-block: 62px; }
+.portfolio .academic-record { border-left-color: var(--accent); }
+.portfolio .experience-section { padding-block: 88px; }
+.portfolio .experience-entry { padding-block: 30px; }
+.portfolio .experience-entry h3 { font-size: 1.5rem; }
+.portfolio .skills-section { padding-block: 72px; }
+.portfolio .skills-tracer { background: var(--paper); padding: 24px; border: 1px solid var(--line); }
+.portfolio .credentials-section { padding-block: 90px; }
+.portfolio .credential-shelf { gap: 48px 38px; }
+.portfolio .certificate-trigger { padding: 14px; box-shadow: 4px 5px 0 #202c2a0a; }
+.portfolio .credential h3 { font-size: 1.25rem; }
+.portfolio .credential .eyebrow { font-size: .72rem; }
+.portfolio .contact-section { background: var(--soft); padding-block: 85px; }
+.portfolio .contact-layout { gap: 90px; align-items: start; }
+.portfolio .contact-copy h2 { font-size: clamp(3rem,6.5vw,5.6rem); line-height: 1; letter-spacing: -.065em; }
+.contact-period { color: var(--signal); }
+.portfolio .contact-form { background: var(--surface); border: 1px solid var(--line); padding: 30px; box-shadow: 5px 6px 0 #202c2a0a; transform: rotate(1deg); }
+.portfolio .contact-form input, .portfolio .contact-form textarea { background: transparent; }
+.portfolio .newsletter-section { padding-block: 54px; }
+.closing-signature { border-top: 1px solid var(--line); padding-top: 35px; display: flex; flex-direction: column; }
+.closing-signature > span { font-family: var(--font-note); color: var(--accent); font-size: 1.8rem; }
+.closing-signature strong { font-family: var(--font-display); font-size: clamp(4rem,12vw,10rem); line-height: 1.2; font-weight: 800; letter-spacing: -.06em; word-spacing: .12em; }
+.closing-signature strong span { color: var(--signal); }
+.portfolio .footer { border-top: 0; padding-top: 23px; padding-bottom: 28px; }
+@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+  .hero-nameplate h1 { animation: name-arrives 600ms cubic-bezier(.2,.7,.2,1) both; }
+  .signal-study { animation: study-arrives 700ms 80ms ease both; }
+}
+@keyframes name-arrives { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes study-arrives { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 1100px) {
+  .portfolio .hero h1 { font-size: 11.6vw; }
+  .nameplate-note { width: 110px; }
+  .nameplate-note .handwritten { font-size: 1.4rem; }
+  .portfolio .hero-layout { gap: 40px; }
+  .signal-controls button { padding-inline: 10px; }
+  .signal-top { gap: 8px; }
+  .signal-top .utility { font-size: .68rem; }
+  .portfolio .churn-spread { gap: 35px; }
+  .portfolio .churn-project { padding: 30px; }
+  .portfolio .churn-project[data-evidence-match] { padding-left: 27px; }
+  .portfolio .nurse-spread { gap: 45px; }
+  .portfolio .about-section { gap: 65px; }
+  .portfolio .contact-layout { gap: 45px; }
+}
+@media (max-width: 900px) {
+  .portfolio .hero-layout { grid-template-columns: .95fr 1.05fr; gap: 28px; }
+  .portfolio .hero h1 { font-size: 11.3vw; }
+  .nameplate-note { width: 95px; }
+  .signal-top { flex-direction: column; align-items: start; }
+  .signal-controls { width: 100%; justify-content: space-between; }
+  .signal-stage { min-height: 200px; }
+  .signal-foot { grid-template-columns: 1fr; gap: 12px; }
+  .signal-foot p { min-height: 4.8em; }
+  .signal-foot a { min-height: 44px; }
+  .signal-scribble { font-size: 1.3rem; bottom: 28px; }
+  .signal-api { grid-template-columns: 1fr 16px 1.3fr 16px 1fr; gap: 4px; }
+  .api-profile strong, .api-output strong { font-size: .75rem; }
+  .api-model { padding: 13px 5px; }
+  .api-model svg { width: 50px; height: 50px; }
+  .api-model strong { font-size: .82rem; }
+  .api-model .utility { font-size: .6rem; }
+  .evidence-desk { grid-template-columns: 150px 1fr; gap: 30px; }
+  .portfolio .evidence-desk .trail-links { grid-template-columns: 1fr 1fr; gap: 15px 24px; }
+  .portfolio .section-heading { gap: 25px; }
+  .portfolio .section-aside { max-width: 240px; }
+  .portfolio .churn-spread { grid-template-columns: 1fr; gap: 30px; }
+  .portfolio .churn-project h3 { max-width: 600px; }
+  .portfolio .pipeline-sheet { transform: none; }
+  .portfolio .pipeline-detail { min-height: 0; }
+  .portfolio .nurse-spread { gap: 35px; }
+  .portfolio .robot-schematic { padding: 24px; }
+  .portfolio .software-art { padding-inline: 14px; }
+  .portfolio .flow-node { padding: 10px; font-size: .7rem; }
+  .portfolio .about-section { grid-template-columns: .65fr 1.35fr; gap: 40px; }
+  .portfolio .about-margin .note-arrow { margin-left: 100px; }
+  .portfolio .about-facts { grid-template-columns: 1fr 1fr; }
+  .portfolio .about-facts > div:last-child { grid-column: 1 / -1; }
+  .portfolio .credential-shelf { gap: 38px 26px; }
+  .portfolio .contact-layout { grid-template-columns: 1fr; gap: 40px; }
+  .portfolio .contact-copy h2 { font-size: 4rem; }
+  .portfolio .contact-form { transform: none; }
+}
+@media (max-width: 640px) {
+  .portfolio .hero { padding-top: 23px; }
+  .portfolio .hero-topline .eyebrow, .portfolio .hero-topline .utility { font-size: .7rem; }
+  .hero-nameplate { align-items: start; padding-block: 28px 20px; gap: 5px; }
+  .portfolio .hero h1 { font-size: clamp(4.5rem,20vw,7.5rem); line-height: .91; letter-spacing: -.06em; }
+  .portfolio .name-last { display: block; margin: 5px 0 0; }
+  .nameplate-note { width: 80px; padding-top: 12px; }
+  .nameplate-note .handwritten { font-size: 1.1rem; white-space: nowrap; }
+  .nameplate-note svg { width: 55px; margin-left: 0; }
+  .portfolio .hero-layout { grid-template-columns: 1fr; gap: 36px; padding-top: 12px; padding-bottom: 24px; }
+  .portfolio .hero-role { font-size: 1rem; max-width: none; }
+  .portfolio .role-prefix { font-size: .7rem; margin-bottom: 8px; }
+  .portfolio .hero-thesis { font-size: clamp(2rem,8.7vw,2.8rem); margin-top: 22px; }
+  .portfolio .hero-description { margin-top: 22px; font-size: .96rem; }
+  .portfolio .hero-actions { gap: 18px; margin-top: 23px; }
+  .portfolio .hero-bottom { font-size: .72rem; gap: 10px; }
+  .signal-top { flex-direction: row; align-items: center; }
+  .signal-top .utility { max-width: 105px; font-size: .7rem; }
+  .signal-controls { width: auto; }
+  .signal-controls button { font-size: .7rem; padding-inline: 10px; }
+  .signal-stage { min-height: 200px; }
+  .signal-foot { grid-template-columns: 1fr; gap: 13px; }
+  .signal-foot p { min-height: 3.2em; font-size: .85rem; }
+  .signal-foot a { font-size: .83rem; }
+  .signal-caption { font-size: .62rem; text-align: left; margin-top: 0; }
+  .signal-scribble { bottom: 28px; }
+  .evidence-desk { grid-template-columns: 1fr; gap: 24px; padding-block: 30px 40px; }
+  .evidence-margin { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+  .evidence-margin .handwritten { font-size: 1.25rem; margin: 0; }
+  .portfolio .evidence-desk .trail-links { grid-template-columns: 1fr 1fr; gap: 20px; }
+  .portfolio .evidence-desk .trail-detail { display: none; }
+  .portfolio .evidence-desk .trail-evidence-link { font-size: .87rem; }
+  .portfolio .evidence-desk .trail-button { padding-inline: 13px; }
+  .portfolio .projects-section { padding-block: 47px 55px; }
+  .portfolio .section-heading { align-items: start; margin-bottom: 28px; }
+  .portfolio .section-heading h2 { font-size: clamp(2rem,8.6vw,2.7rem); }
+  .portfolio .section-aside { max-width: none; font-size: .85rem; }
+  .portfolio .project-toolbar { margin-bottom: 27px; padding-block: 7px; }
+  .portfolio .project-list { gap: 34px; }
+  .portfolio .churn-project { padding: 23px 18px; }
+  .portfolio .churn-project[data-evidence-match] { padding-left: 15px; }
+  .portfolio .churn-project .project-kicker { font-size: .7rem; margin-bottom: 22px; }
+  .portfolio .churn-project h3 { font-size: 2rem; }
+  .portfolio .churn-spread { gap: 25px; }
+  .portfolio .churn-metrics { gap: 24px; }
+  .portfolio .churn-metrics strong { font-size: 2.8rem; }
+  .portfolio .pipeline-sheet { padding: 19px 15px; box-shadow: 4px 5px 0 #133b2e; }
+  .portfolio .nurse-spread { grid-template-columns: 1fr; gap: 25px; }
+  .portfolio .nurse-project { padding-bottom: 30px; }
+  .portfolio .nurse-project h3 { font-size: 2rem; }
+  .portfolio .robot-schematic { padding: 25px; }
+  .portfolio .software-art { height: 160px; }
+  .portfolio .software-project h3 { font-size: 1.7rem; }
+  .portfolio .project-entry { grid-template-columns: 44px 1fr; gap: 16px; }
+  .portfolio .entry-symbol { width: 40px; height: 44px; font-size: 1.5rem; }
+  .portfolio .about-section { grid-template-columns: 1fr; gap: 33px; padding-block: 54px; }
+  .portfolio .about-margin { display: flex; align-items: start; justify-content: space-between; gap: 22px; }
+  .about-portrait { width: 150px; margin: 0 8px 0 0; padding: 7px; flex-shrink: 0; }
+  .about-portrait figcaption { font-size: 1.2rem; margin-block: 7px; }
+  .portfolio .about-margin .note-arrow { display: none; }
+  .portfolio .about-body h2 { font-size: 2rem; }
+  .portfolio .about-body > .about-lead { font-size: 1.06rem; }
+  .portfolio .education-section { padding-block: 42px; }
+  .portfolio .education-layout h2 { font-size: 2rem; }
+  .portfolio .experience-section { padding-block: 53px; }
+  .portfolio .experience-entry h3 { font-size: 1.25rem; }
+  .portfolio .skills-section { padding-block: 47px; }
+  .portfolio .skills-tracer { padding: 20px 16px; }
+  .portfolio .credentials-section { padding-block: 53px; }
+  .portfolio .credential-shelf { grid-template-columns: 1fr; gap: 37px; }
+  .portfolio .credential h3 { font-size: 1.2rem; }
+  .portfolio .contact-section { padding-block: 48px; }
+  .portfolio .contact-copy h2 { font-size: 3.7rem; }
+  .portfolio .contact-form { padding: 23px 18px; }
+  .portfolio .newsletter-section { padding-block: 38px; }
+  .closing-signature { padding-top: 24px; }
+  .closing-signature > span { font-size: 1.4rem; }
+  .closing-signature strong { font-size: 13.1vw; line-height: 1.4; white-space: nowrap; }
+  .portfolio .footer { padding-top: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .portfolio *, .portfolio *::before, .portfolio *::after { animation: none !important; transition: none !important; }
+}
